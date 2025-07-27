@@ -41,6 +41,17 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
+    // Testing dependencies
+    testImplementation(libs.mockk)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.mockwebserver)
+
+    // Unit tests (JUnit 5)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
+
     // Retrofit and Networking
     implementation(libs.retrofit)
     implementation(libs.converter.moshi)
@@ -53,6 +64,9 @@ dependencies {
 
     //Data Store
     implementation(libs.androidx.datastore.preferences)
+    testImplementation(kotlin("test"))
+}
 
-
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

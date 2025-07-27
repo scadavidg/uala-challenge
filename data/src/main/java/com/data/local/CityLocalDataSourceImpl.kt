@@ -1,22 +1,16 @@
 package com.data.local
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "city_prefs")
 
 class CityLocalDataSourceImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val dataStore: DataStore<Preferences>
 ) : CityLocalDataSource {
-
-    private val dataStore = context.dataStore
 
     companion object {
         val FAVORITES_KEY = stringSetPreferencesKey("favorite_city_ids")
@@ -47,4 +41,5 @@ class CityLocalDataSourceImpl @Inject constructor(
         }
     }
 }
+
 
