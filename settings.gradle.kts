@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "ualachallenge"
 include(":app")
- 
+include(":data")
+include(":domain")
