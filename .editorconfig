@@ -1,0 +1,11 @@
+root = true
+
+# Reglas generales
+[*.{kt,kts}]
+ktlint_standard_function-naming = enabled
+ktlint_filename = enabled
+
+# Excepciones para archivos de composables
+[*Composable*.{kt,kts}]
+ktlint_standard_function-naming = disabled
+ktlint_filename = disabled
