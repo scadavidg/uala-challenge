@@ -27,7 +27,11 @@ import com.domain.models.City
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CityItemComposable(city: City, onClick: () -> Unit) {
+fun CityItemComposable(
+    city: City,
+    onClick: () -> Unit,
+    onFavoriteToggle: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -63,11 +67,9 @@ fun CityItemComposable(city: City, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Favorite button (UI only, no logic)
+                // Favorite button with actual logic
                 IconButton(
-                    onClick = {
-                        // TODO: Implement favorite toggle logic
-                    }
+                    onClick = onFavoriteToggle
                 ) {
                     Icon(
                         imageVector = if (city.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -123,7 +125,8 @@ fun CityItemComposablePreview() {
                 lon = -74.0060,
                 isFavorite = true
             ),
-            onClick = {}
+            onClick = {},
+            onFavoriteToggle = {}
         )
     }
 }
@@ -141,7 +144,8 @@ fun CityItemComposableNotFavoritePreview() {
                 lon = -0.1278,
                 isFavorite = false
             ),
-            onClick = {}
+            onClick = {},
+            onFavoriteToggle = {}
         )
     }
 }

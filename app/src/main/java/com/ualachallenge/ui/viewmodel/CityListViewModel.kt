@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.domain.models.City
 import com.domain.models.Result
+import com.domain.usecases.GetFavoriteCitiesUseCase
 import com.domain.usecases.LoadAllCitiesUseCase
+import com.domain.usecases.ToggleFavoriteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +17,9 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class CityListViewModel @Inject constructor(
-    private val loadAllCitiesUseCase: LoadAllCitiesUseCase
+    private val loadAllCitiesUseCase: LoadAllCitiesUseCase,
+    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val getFavoriteCitiesUseCase: GetFavoriteCitiesUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CityListUiState())
@@ -34,6 +38,7 @@ class CityListViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             cities = result.data,
+                            filteredCities = applyFilters(result.data, it.showOnlyFavorites),
                             isLoading = false,
                             error = null
                         )
@@ -53,10 +58,57 @@ class CityListViewModel @Inject constructor(
             }
         }
     }
+
+    fun toggleFavorite(cityId: Int) {
+        viewModelScope.launch {
+            when (val result = toggleFavoriteUseCase(cityId)) {
+                is Result.Success -> {
+                    // Update the cities list with the new favorite status
+                    _uiState.update { currentState ->
+                        val updatedCities = currentState.cities.map { city ->
+                            if (city.id == cityId) city.copy(isFavorite = !city.isFavorite) else city
+                        }
+                        currentState.copy(
+                            cities = updatedCities,
+                            filteredCities = applyFilters(updatedCities, currentState.showOnlyFavorites)
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(error = result.message)
+                    }
+                }
+                is Result.Loading -> {
+                    // Handle loading state if needed
+                }
+            }
+        }
+    }
+
+    fun toggleShowOnlyFavorites() {
+        _uiState.update { currentState ->
+            val newShowOnlyFavorites = !currentState.showOnlyFavorites
+            currentState.copy(
+                showOnlyFavorites = newShowOnlyFavorites,
+                filteredCities = applyFilters(currentState.cities, newShowOnlyFavorites)
+            )
+        }
+    }
+
+    private fun applyFilters(cities: List<City>, showOnlyFavorites: Boolean): List<City> {
+        return if (showOnlyFavorites) {
+            cities.filter { it.isFavorite }
+        } else {
+            cities
+        }
+    }
 }
 
 data class CityListUiState(
     val cities: List<City> = emptyList(),
+    val filteredCities: List<City> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val showOnlyFavorites: Boolean = false
 )

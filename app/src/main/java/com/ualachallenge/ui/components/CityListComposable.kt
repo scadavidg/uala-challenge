@@ -14,10 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.domain.models.City
 
 @Composable
-fun CityListComposable(
-    cities: List<City>,
-    onCityClick: (Int) -> Unit
-) {
+fun CityListComposable(cities: List<City>, onCityClick: (Int) -> Unit, onFavoriteToggle: (Int) -> Unit) {
     val groupedCities = cities.groupBy { it.name.first().uppercase() }
         .toSortedMap()
 
@@ -39,7 +36,8 @@ fun CityListComposable(
             items(citiesInGroup) { city ->
                 CityItemComposable(
                     city = city,
-                    onClick = { onCityClick(city.id) }
+                    onClick = { onCityClick(city.id) },
+                    onFavoriteToggle = { onFavoriteToggle(city.id) }
                 )
             }
         }
@@ -77,7 +75,8 @@ fun CityListComposablePreview() {
                     isFavorite = true
                 )
             ),
-            onCityClick = {}
+            onCityClick = {},
+            onFavoriteToggle = {}
         )
     }
 }

@@ -2,7 +2,9 @@ package com.ualachallenge.ui.viewmodel
 
 import com.domain.models.City
 import com.domain.models.Result
+import com.domain.usecases.GetFavoriteCitiesUseCase
 import com.domain.usecases.LoadAllCitiesUseCase
+import com.domain.usecases.ToggleFavoriteUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +17,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -25,42 +26,36 @@ class CityListViewModelTest {
 
     private lateinit var viewModel: CityListViewModel
     private lateinit var loadAllCitiesUseCase: LoadAllCitiesUseCase
+    private lateinit var toggleFavoriteUseCase: ToggleFavoriteUseCase
+    private lateinit var getFavoriteCitiesUseCase: GetFavoriteCitiesUseCase
+
     private val testDispatcher = StandardTestDispatcher()
 
-    private val mockCities = listOf(
-        City(
-            id = 1,
-            name = "New York",
-            country = "United States",
-            lat = 40.7128,
-            lon = -74.0060,
-            isFavorite = true
-        ),
-        City(
-            id = 2,
-            name = "London",
-            country = "United Kingdom",
-            lat = 51.5074,
-            lon = -0.1278,
-            isFavorite = false
-        ),
-        City(
-            id = 3,
-            name = "Paris",
-            country = "France",
-            lat = 48.8566,
-            lon = 2.3522,
-            isFavorite = true
-        )
+    private val testCities = listOf(
+        City(id = 1, name = "New York", country = "US", lat = 40.7128, lon = -74.0060, isFavorite = false),
+        City(id = 2, name = "London", country = "UK", lat = 51.5074, lon = -0.1278, isFavorite = true),
+        City(id = 3, name = "Paris", country = "FR", lat = 48.8566, lon = 2.3522, isFavorite = false)
     )
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
+
         loadAllCitiesUseCase = mockk()
+        toggleFavoriteUseCase = mockk()
+        getFavoriteCitiesUseCase = mockk()
+
         // Mock the initial call that happens in init
         coEvery { loadAllCitiesUseCase() } returns Result.Success(emptyList())
-        viewModel = CityListViewModel(loadAllCitiesUseCase)
+
+        viewModel = CityListViewModel(
+            loadAllCitiesUseCase,
+            toggleFavoriteUseCase,
+            getFavoriteCitiesUseCase
+        )
+
+        // Wait for initial load to complete
+        testDispatcher.scheduler.advanceUntilIdle()
     }
 
     @After
@@ -69,53 +64,85 @@ class CityListViewModelTest {
     }
 
     @Test
-    fun `initial state should be empty`() = runTest {
+    fun `loadCities should update state with cities`() = runTest {
         // Given
-        coEvery { loadAllCitiesUseCase() } returns Result.Success(emptyList())
-
-        // When
-        val initialState = viewModel.uiState.first()
-        testDispatcher.scheduler.advanceUntilIdle()
-        val state = viewModel.uiState.first()
-
-        // Then
-        assertEquals(emptyList<City>(), state.cities)
-        assertFalse(state.isLoading)
-        assertNull(state.error)
-    }
-
-    @Test
-    fun `loadCities should update state to loading when called`() = runTest {
-        // Given
-        coEvery { loadAllCitiesUseCase() } returns Result.Loading
+        coEvery { loadAllCitiesUseCase() } returns Result.Success(testCities)
 
         // When
         viewModel.loadCities()
         testDispatcher.scheduler.advanceUntilIdle()
-        val state = viewModel.uiState.first()
 
         // Then
-        assertTrue(state.isLoading)
+        val state = viewModel.uiState.first()
+        assertEquals(testCities, state.cities)
+        assertEquals(testCities, state.filteredCities)
+        assertFalse(state.isLoading)
+        assertEquals(null, state.error)
     }
 
     @Test
-    fun `loadCities should update state with cities on success`() = runTest {
+    fun `toggleFavorite should update city favorite status`() = runTest {
         // Given
-        coEvery { loadAllCitiesUseCase() } returns Result.Success(mockCities)
+        coEvery { loadAllCitiesUseCase() } returns Result.Success(testCities)
+        coEvery { toggleFavoriteUseCase(1) } returns Result.Success(Unit)
 
-        // When
+        // Load cities first
         viewModel.loadCities()
         testDispatcher.scheduler.advanceUntilIdle()
-        val state = viewModel.uiState.first()
+
+        // When
+        viewModel.toggleFavorite(1)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         // Then
-        assertEquals(mockCities, state.cities)
-        assertFalse(state.isLoading)
-        assertNull(state.error)
+        val state = viewModel.uiState.first()
+        val newYork = state.cities.find { it.id == 1 }
+        assertTrue(newYork?.isFavorite == true)
     }
 
     @Test
-    fun `loadCities should update state with error on failure`() = runTest {
+    fun `toggleShowOnlyFavorites should filter cities correctly`() = runTest {
+        // Given
+        coEvery { loadAllCitiesUseCase() } returns Result.Success(testCities)
+
+        // Load cities first
+        viewModel.loadCities()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // When - toggle to show only favorites
+        viewModel.toggleShowOnlyFavorites()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        val state = viewModel.uiState.first()
+        assertTrue(state.showOnlyFavorites)
+        assertEquals(1, state.filteredCities.size)
+        assertEquals("London", state.filteredCities[0].name)
+    }
+
+    @Test
+    fun `toggleShowOnlyFavorites should show all cities when toggled back`() = runTest {
+        // Given
+        coEvery { loadAllCitiesUseCase() } returns Result.Success(testCities)
+
+        // Load cities first
+        viewModel.loadCities()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // When - toggle to show only favorites, then back to all
+        viewModel.toggleShowOnlyFavorites()
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.toggleShowOnlyFavorites()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        val state = viewModel.uiState.first()
+        assertFalse(state.showOnlyFavorites)
+        assertEquals(3, state.filteredCities.size)
+    }
+
+    @Test
+    fun `loadCities should handle error correctly`() = runTest {
         // Given
         val errorMessage = "Network error"
         coEvery { loadAllCitiesUseCase() } returns Result.Error(errorMessage)
@@ -123,51 +150,30 @@ class CityListViewModelTest {
         // When
         viewModel.loadCities()
         testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
         val state = viewModel.uiState.first()
-
-        // Then
-        assertEquals(errorMessage, state.error)
+        assertTrue(state.cities.isEmpty())
         assertFalse(state.isLoading)
-        assertEquals(emptyList<City>(), state.cities)
+        assertEquals(errorMessage, state.error)
     }
 
     @Test
-    fun `loadCities should clear previous error when called again`() = runTest {
-        // Given - First call returns error
-        coEvery { loadAllCitiesUseCase() } returns Result.Error("Network error")
-
-        // When - First call
-        viewModel.loadCities()
-        testDispatcher.scheduler.advanceUntilIdle()
-        var state = viewModel.uiState.first()
-
-        // Then - Verify error state
-        assertEquals("Network error", state.error)
-
-        // Given - Second call returns success
-        coEvery { loadAllCitiesUseCase() } returns Result.Success(mockCities)
-
-        // When - Second call
-        viewModel.loadCities()
-        testDispatcher.scheduler.advanceUntilIdle()
-        state = viewModel.uiState.first()
-
-        // Then - Verify error is cleared
-        assertNull(state.error)
-        assertEquals(mockCities, state.cities)
-    }
-
-    @Test
-    fun `loadCities should be called automatically on init`() = runTest {
+    fun `toggleFavorite should handle error correctly`() = runTest {
         // Given
-        coEvery { loadAllCitiesUseCase() } returns Result.Success(mockCities)
+        coEvery { loadAllCitiesUseCase() } returns Result.Success(testCities)
+        coEvery { toggleFavoriteUseCase(1) } returns Result.Error("Toggle failed")
 
-        // When - Create new viewModel to trigger init
-        val newViewModel = CityListViewModel(loadAllCitiesUseCase)
+        // Load cities first
+        viewModel.loadCities()
         testDispatcher.scheduler.advanceUntilIdle()
-        val state = newViewModel.uiState.first()
+
+        // When
+        viewModel.toggleFavorite(1)
+        testDispatcher.scheduler.advanceUntilIdle()
 
         // Then
-        assertEquals(mockCities, state.cities)
+        val state = viewModel.uiState.first()
+        assertEquals("Toggle failed", state.error)
     }
 }

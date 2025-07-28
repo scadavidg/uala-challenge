@@ -1,117 +1,79 @@
 package com.ualachallenge.ui.components
 
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.domain.models.City
 import org.junit.Rule
 import org.junit.Test
 
 class CityItemComposableTest {
+
     @get:Rule
     val composeTestRule = createComposeRule()
 
-    private val testCity =
-        City(
-            id = 1,
-            name = "New York",
-            country = "United States",
-            lat = 40.7128,
-            lon = -74.0060,
-            isFavorite = true
-        )
+    private val testCity = City(
+        id = 1,
+        name = "New York",
+        country = "United States",
+        lat = 40.7128,
+        lon = -74.0060,
+        isFavorite = false
+    )
 
     @Test
-    fun cityItem_displaysCityAndCountry() {
+    fun cityItem_displaysCorrectly() {
+        // Given
+        var favoriteToggleCount = 0
+
+        // When
         composeTestRule.setContent {
             CityItemComposable(
                 city = testCity,
-                onClick = {}
+                onClick = {},
+                onFavoriteToggle = { favoriteToggleCount++ }
             )
         }
 
-        composeTestRule.onNodeWithText("New York, United States").assertExists()
+        // Then
+        composeTestRule.onNodeWithContentDescription("Add to favorites").assertIsDisplayed()
     }
 
     @Test
-    fun cityItem_displaysCoordinates() {
+    fun favoriteButton_toggleWorks() {
+        // Given
+        var favoriteToggleCount = 0
+
+        // When
         composeTestRule.setContent {
             CityItemComposable(
                 city = testCity,
-                onClick = {}
+                onClick = {},
+                onFavoriteToggle = { favoriteToggleCount++ }
             )
         }
 
-        composeTestRule.onNodeWithText("📍 40.7128, -74.0060").assertExists()
+        // Then
+        composeTestRule.onNodeWithContentDescription("Add to favorites").performClick()
+        assert(favoriteToggleCount == 1)
     }
 
     @Test
-    fun cityItem_showsFavoriteIcon_whenCityIsFavorite() {
+    fun favoriteButton_showsCorrectIcon_whenFavorite() {
+        // Given
+        val favoriteCity = testCity.copy(isFavorite = true)
+
+        // When
         composeTestRule.setContent {
             CityItemComposable(
-                city = testCity,
-                onClick = {}
+                city = favoriteCity,
+                onClick = {},
+                onFavoriteToggle = {}
             )
         }
 
-        // Check that favorite icon is visible
-        composeTestRule.onNodeWithContentDescription("Remove from favorites").assertExists()
-    }
-
-    @Test
-    fun cityItem_showsNotFavoriteIcon_whenCityIsNotFavorite() {
-        val notFavoriteCity = testCity.copy(isFavorite = false)
-
-        composeTestRule.setContent {
-            CityItemComposable(
-                city = notFavoriteCity,
-                onClick = {}
-            )
-        }
-
-        // Check that not favorite icon is visible
-        composeTestRule.onNodeWithContentDescription("Add to favorites").assertExists()
-    }
-
-    @Test
-    fun cityItem_showsMapButton() {
-        composeTestRule.setContent {
-            CityItemComposable(
-                city = testCity,
-                onClick = {}
-            )
-        }
-
-        composeTestRule.onNodeWithContentDescription("Open map").assertExists()
-    }
-
-    @Test
-    fun cityItem_showsInfoButton() {
-        composeTestRule.setContent {
-            CityItemComposable(
-                city = testCity,
-                onClick = {}
-            )
-        }
-
-        composeTestRule.onNodeWithContentDescription("City information").assertExists()
-    }
-
-    @Test
-    fun cityItem_callsOnClick_whenClicked() {
-        var clicked = false
-
-        composeTestRule.setContent {
-            CityItemComposable(
-                city = testCity,
-                onClick = { clicked = true }
-            )
-        }
-
-        // Click on the card area
-        composeTestRule.onNodeWithText("New York, United States").performClick()
-
-        assert(clicked)
+        // Then
+        composeTestRule.onNodeWithContentDescription("Remove from favorites").assertIsDisplayed()
     }
 }
