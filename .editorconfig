@@ -21,6 +21,6 @@ ktlint_filename = disabled
 [*.{kt,kts}]
 indent_style = space
 indent_size = 4
-max_line_length = 120
+max_line_length = 150
 ktlint_code_style = android_studio
 

@@ -29,7 +29,8 @@ class CityListComposablePerformanceTest {
             val startTime = System.currentTimeMillis()
             CityListComposable(
                 cities = largeCityList,
-                onCityClick = {}
+                onCityClick = {},
+                onFavoriteToggle = {}
             )
             renderTime = System.currentTimeMillis() - startTime
         }
@@ -47,7 +48,8 @@ class CityListComposablePerformanceTest {
             val startTime = System.currentTimeMillis()
             CityListComposable(
                 cities = mediumCityList,
-                onCityClick = {}
+                onCityClick = {},
+                onFavoriteToggle = {}
             )
             renderTime = System.currentTimeMillis() - startTime
         }
@@ -67,7 +69,8 @@ class CityListComposablePerformanceTest {
         composeTestRule.setContent {
             CityListComposable(
                 cities = largeCityList,
-                onCityClick = {}
+                onCityClick = {},
+                onFavoriteToggle = {}
             )
         }
 

@@ -45,6 +45,9 @@ ktlint {
     filter {
         exclude { element -> element.file.path.contains("build/") }
     }
+    // Use .editorconfig for configuration
+    android.set(true)
+    verbose.set(true)
 }
 
 dependencies {

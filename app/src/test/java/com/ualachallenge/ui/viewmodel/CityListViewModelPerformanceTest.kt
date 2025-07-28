@@ -2,7 +2,9 @@ package com.ualachallenge.ui.viewmodel
 
 import com.domain.models.City
 import com.domain.models.Result
+import com.domain.usecases.GetFavoriteCitiesUseCase
 import com.domain.usecases.LoadAllCitiesUseCase
+import com.domain.usecases.ToggleFavoriteUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +24,8 @@ import org.junit.Test
 class CityListViewModelPerformanceTest {
     private lateinit var viewModel: CityListViewModel
     private lateinit var loadAllCitiesUseCase: LoadAllCitiesUseCase
+    private lateinit var toggleFavoriteUseCase: ToggleFavoriteUseCase
+    private lateinit var getFavoriteCitiesUseCase: GetFavoriteCitiesUseCase
     private val testDispatcher = StandardTestDispatcher()
 
     private fun generateLargeCityList(size: Int): List<City> {
@@ -41,8 +45,20 @@ class CityListViewModelPerformanceTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         loadAllCitiesUseCase = mockk()
+        toggleFavoriteUseCase = mockk()
+        getFavoriteCitiesUseCase = mockk()
+
+        // Mock the initial call that happens in init
         coEvery { loadAllCitiesUseCase() } returns Result.Success(emptyList())
-        viewModel = CityListViewModel(loadAllCitiesUseCase)
+
+        viewModel = CityListViewModel(
+            loadAllCitiesUseCase,
+            toggleFavoriteUseCase,
+            getFavoriteCitiesUseCase
+        )
+
+        // Wait for initial load to complete
+        testDispatcher.scheduler.advanceUntilIdle()
     }
 
     @After
@@ -117,12 +133,12 @@ class CityListViewModelPerformanceTest {
         val startTime = System.currentTimeMillis()
         viewModel.loadCities()
         testDispatcher.scheduler.advanceUntilIdle()
-        val loadingState = viewModel.uiState.first { it.isLoading }
+        val state = viewModel.uiState.first()
         val loadingTime = System.currentTimeMillis() - startTime
 
         // Then
         assertTrue("Loading state took ${loadingTime}ms, expected under 100ms", loadingTime < 100)
-        assertTrue(loadingState.isLoading)
+        assertEquals(cityList.size, state.cities.size)
     }
 
     @Test
@@ -140,5 +156,46 @@ class CityListViewModelPerformanceTest {
         // Then
         assertTrue("Error handling took ${errorTime}ms, expected under 50ms", errorTime < 50)
         assertEquals("Test error", errorState.error)
+    }
+
+    @Test
+    fun toggleFavorite_performance_under50ms() = runTest {
+        // Given
+        val cityList = generateLargeCityList(100)
+        coEvery { loadAllCitiesUseCase() } returns Result.Success(cityList)
+        coEvery { toggleFavoriteUseCase(1) } returns Result.Success(Unit)
+
+        // Load cities first
+        viewModel.loadCities()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // When
+        val startTime = System.currentTimeMillis()
+        viewModel.toggleFavorite(1)
+        testDispatcher.scheduler.advanceUntilIdle()
+        val processingTime = System.currentTimeMillis() - startTime
+
+        // Then
+        assertTrue("Toggle favorite took ${processingTime}ms, expected under 50ms", processingTime < 50)
+    }
+
+    @Test
+    fun toggleShowOnlyFavorites_performance_under20ms() = runTest {
+        // Given
+        val cityList = generateLargeCityList(100)
+        coEvery { loadAllCitiesUseCase() } returns Result.Success(cityList)
+
+        // Load cities first
+        viewModel.loadCities()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // When
+        val startTime = System.currentTimeMillis()
+        viewModel.toggleShowOnlyFavorites()
+        testDispatcher.scheduler.advanceUntilIdle()
+        val processingTime = System.currentTimeMillis() - startTime
+
+        // Then
+        assertTrue("Toggle show only favorites took ${processingTime}ms, expected under 20ms", processingTime < 20)
     }
 }

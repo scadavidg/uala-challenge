@@ -4,10 +4,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -39,7 +44,18 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, viewModel: CityListView
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cities") }
+                title = { Text("Cities") },
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.toggleShowOnlyFavorites() }
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.showOnlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (uiState.showOnlyFavorites) "Show all cities" else "Show only favorites",
+                            tint = if (uiState.showOnlyFavorites) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -55,19 +71,22 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, viewModel: CityListView
                 uiState.isLoading && uiState.cities.isEmpty() -> {
                     LoadingScreenComposable()
                 }
+
                 uiState.error != null && uiState.cities.isEmpty() -> {
                     ErrorScreenComposable(
                         error = uiState.error!!,
                         onRetry = { viewModel.loadCities() }
                     )
                 }
+
                 else -> {
-                    if (uiState.cities.isEmpty()) {
+                    if (uiState.filteredCities.isEmpty()) {
                         EmptyStateScreenComposable()
                     } else {
                         CityListComposable(
-                            cities = uiState.cities,
-                            onCityClick = onCityClick
+                            cities = uiState.filteredCities,
+                            onCityClick = onCityClick,
+                            onFavoriteToggle = { cityId -> viewModel.toggleFavorite(cityId) }
                         )
                     }
                 }
