@@ -1,6 +1,11 @@
 package com.data.remote.api
 
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 import junit.framework.TestCase.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+import kotlin.test.fail
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
@@ -15,11 +20,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
-import java.io.IOException
-import java.util.concurrent.TimeUnit
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
-import kotlin.test.fail
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

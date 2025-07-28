@@ -65,4 +65,4 @@ class LoadAllCitiesUseCaseTest {
         assertTrue(result is Result.Success)
         assertTrue((result as Result.Success).data.isEmpty())
     }
-} 
+}

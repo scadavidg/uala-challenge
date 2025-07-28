@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ktlint)
     kotlin("kapt")
 }
 
@@ -51,7 +52,6 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 
-
     // Retrofit and Networking
     implementation(libs.retrofit)
     implementation(libs.converter.moshi)
@@ -62,11 +62,19 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)
 
-    //Data Store
+    // Data Store
     implementation(libs.androidx.datastore.preferences)
     testImplementation(kotlin("test"))
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+ktlint {
+    version.set("0.50.0")
+    enableExperimentalRules.set(true)
+    filter {
+        exclude { element -> element.file.path.contains("build/") }
+    }
 }

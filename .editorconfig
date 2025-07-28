@@ -1,11 +1,15 @@
 root = true
 
-# Reglas generales
-[*.{kt,kts}]
-ktlint_standard_function-naming = enabled
-ktlint_filename = enabled
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
 
-# Excepciones para archivos de composables
-[*Composable*.{kt,kts}]
-ktlint_standard_function-naming = disabled
-ktlint_filename = disabled
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+max_line_length = 120
+ktlint_code_style = android_studio
+ktlint_standard_fun-naming = disabled
+ktlint_standard_no-wildcard-imports = disabled

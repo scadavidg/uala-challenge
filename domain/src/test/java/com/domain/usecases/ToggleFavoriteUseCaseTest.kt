@@ -61,4 +61,4 @@ class ToggleFavoriteUseCaseTest {
         // Then
         assertTrue(result is Result.Success)
     }
-} 
+}
