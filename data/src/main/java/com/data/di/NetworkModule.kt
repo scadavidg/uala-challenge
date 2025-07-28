@@ -6,6 +6,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -17,12 +18,15 @@ object NetworkModule {
     private const val BASE_URL = "https://gist.githubusercontent.com/"
 
     @Provides
+    @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient()
 
     @Provides
+    @Singleton
     fun provideMoshi(): Moshi = Moshi.Builder().build()
 
     @Provides
+    @Singleton
     fun provideRetrofit(moshi: Moshi): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
@@ -31,6 +35,7 @@ object NetworkModule {
     }
 
     @Provides
+    @Singleton
     fun provideCityApiService(retrofit: Retrofit): CityApiService {
         return retrofit.create(CityApiService::class.java)
     }
