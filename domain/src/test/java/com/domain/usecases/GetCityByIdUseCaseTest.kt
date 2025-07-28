@@ -78,4 +78,4 @@ class GetCityByIdUseCaseTest {
         assertTrue(result is Result.Success)
         assertEquals(city, (result as Result.Success).data)
     }
-} 
+}

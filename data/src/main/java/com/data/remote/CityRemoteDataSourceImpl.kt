@@ -2,9 +2,9 @@ package com.data.remote
 
 import com.data.dto.CityRemoteDto
 import com.data.remote.api.CityApiService
-import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
+import retrofit2.HttpException
 
 class CityRemoteDataSourceImpl @Inject constructor(
     private val api: CityApiService

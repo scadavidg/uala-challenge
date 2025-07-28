@@ -4,9 +4,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
-
+import kotlinx.coroutines.flow.first
 
 class CityLocalDataSourceImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>
@@ -41,5 +40,3 @@ class CityLocalDataSourceImpl @Inject constructor(
         }
     }
 }
-
-

@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
-    id("kotlin-kapt")
+    alias(libs.plugins.ktlint)
     kotlin("kapt")
 }
 
@@ -36,6 +36,14 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+}
+
+ktlint {
+    version.set("0.50.0")
+    enableExperimentalRules.set(true)
+    filter {
+        exclude { element -> element.file.path.contains("build/") }
     }
 }
 
