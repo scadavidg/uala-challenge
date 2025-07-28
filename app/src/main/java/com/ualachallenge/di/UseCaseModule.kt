@@ -3,6 +3,7 @@ package com.ualachallenge.di
 import com.domain.repositories.CityRepository
 import com.domain.usecases.GetFavoriteCitiesUseCase
 import com.domain.usecases.LoadAllCitiesUseCase
+import com.domain.usecases.SearchCitiesUseCase
 import com.domain.usecases.ToggleFavoriteUseCase
 import dagger.Module
 import dagger.Provides
@@ -29,4 +30,10 @@ object UseCaseModule {
     fun provideGetFavoriteCitiesUseCase(
         repository: CityRepository
     ): GetFavoriteCitiesUseCase = GetFavoriteCitiesUseCase(repository)
+
+    @Provides
+    @Singleton
+    fun provideSearchCitiesUseCase(
+        repository: CityRepository
+    ): SearchCitiesUseCase = SearchCitiesUseCase(repository)
 }

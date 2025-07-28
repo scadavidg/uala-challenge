@@ -83,6 +83,7 @@ dependencies {
     androidTestImplementation(libs.ui.test.manifest)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    testImplementation(kotlin("test"))
 
     // Dependency Injection (Hilt)
     implementation(libs.hilt.android)

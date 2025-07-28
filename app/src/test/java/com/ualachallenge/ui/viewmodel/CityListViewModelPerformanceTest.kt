@@ -4,6 +4,7 @@ import com.domain.models.City
 import com.domain.models.Result
 import com.domain.usecases.GetFavoriteCitiesUseCase
 import com.domain.usecases.LoadAllCitiesUseCase
+import com.domain.usecases.SearchCitiesUseCase
 import com.domain.usecases.ToggleFavoriteUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -26,6 +27,7 @@ class CityListViewModelPerformanceTest {
     private lateinit var loadAllCitiesUseCase: LoadAllCitiesUseCase
     private lateinit var toggleFavoriteUseCase: ToggleFavoriteUseCase
     private lateinit var getFavoriteCitiesUseCase: GetFavoriteCitiesUseCase
+    private lateinit var searchCitiesUseCase: SearchCitiesUseCase
     private val testDispatcher = StandardTestDispatcher()
 
     private fun generateLargeCityList(size: Int): List<City> {
@@ -47,6 +49,7 @@ class CityListViewModelPerformanceTest {
         loadAllCitiesUseCase = mockk()
         toggleFavoriteUseCase = mockk()
         getFavoriteCitiesUseCase = mockk()
+        searchCitiesUseCase = mockk()
 
         // Mock the initial call that happens in init
         coEvery { loadAllCitiesUseCase() } returns Result.Success(emptyList())
@@ -54,7 +57,8 @@ class CityListViewModelPerformanceTest {
         viewModel = CityListViewModel(
             loadAllCitiesUseCase,
             toggleFavoriteUseCase,
-            getFavoriteCitiesUseCase
+            getFavoriteCitiesUseCase,
+            searchCitiesUseCase
         )
 
         // Wait for initial load to complete
@@ -197,5 +201,26 @@ class CityListViewModelPerformanceTest {
 
         // Then
         assertTrue("Toggle show only favorites took ${processingTime}ms, expected under 20ms", processingTime < 20)
+    }
+
+    @Test
+    fun searchCities_performance_under100ms() = runTest {
+        // Given
+        val cityList = generateLargeCityList(100)
+        coEvery { loadAllCitiesUseCase() } returns Result.Success(cityList)
+        coEvery { searchCitiesUseCase("test", false) } returns Result.Success(cityList.take(10))
+
+        // Load cities first
+        viewModel.loadCities()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // When
+        val startTime = System.currentTimeMillis()
+        viewModel.searchCities("test")
+        testDispatcher.scheduler.advanceUntilIdle()
+        val processingTime = System.currentTimeMillis() - startTime
+
+        // Then
+        assertTrue("Search cities took ${processingTime}ms, expected under 100ms", processingTime < 100)
     }
 }
