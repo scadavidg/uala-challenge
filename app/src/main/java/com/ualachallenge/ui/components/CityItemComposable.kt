@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,7 +29,8 @@ import com.domain.models.City
 fun CityItemComposable(
     city: City,
     onClick: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    onMapClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -82,28 +82,13 @@ fun CityItemComposable(
                     )
                 }
 
-                // Map navigation button (UI only, no logic)
+                // Map navigation button
                 IconButton(
-                    onClick = {
-                        // TODO: Navigate to map with city coordinates
-                    }
+                    onClick = onMapClick
                 ) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = "Open map",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                // Info button (UI only, no logic)
-                IconButton(
-                    onClick = {
-                        // TODO: Open city information screen
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "City information",
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -126,7 +111,8 @@ fun CityItemComposablePreview() {
                 isFavorite = true
             ),
             onClick = {},
-            onFavoriteToggle = {}
+            onFavoriteToggle = {},
+            onMapClick = {}
         )
     }
 }
@@ -145,7 +131,8 @@ fun CityItemComposableNotFavoritePreview() {
                 isFavorite = false
             ),
             onClick = {},
-            onFavoriteToggle = {}
+            onFavoriteToggle = {},
+            onMapClick = {}
         )
     }
 }

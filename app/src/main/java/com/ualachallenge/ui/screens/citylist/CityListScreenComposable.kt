@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -19,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -34,8 +36,17 @@ import com.ualachallenge.ui.viewmodel.CityListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun CityListScreenComposable(onCityClick: (Int) -> Unit, viewModel: CityListViewModel = hiltViewModel()) {
+fun CityListScreenComposable(
+    onCityClick: (Int) -> Unit,
+    onMapClick: (Int) -> Unit = {},
+    viewModel: CityListViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Refresh cities when the screen becomes active
+    LaunchedEffect(Unit) {
+        viewModel.refreshCities()
+    }
 
     val pullRefreshState =
         rememberPullRefreshState(
@@ -47,6 +58,18 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, viewModel: CityListView
         topBar = {
             TopAppBar(
                 title = { Text("Cities") },
+                navigationIcon = {
+                    if (uiState.showOnlyFavorites) {
+                        IconButton(
+                            onClick = { viewModel.toggleShowOnlyFavorites() }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Back to all cities"
+                            )
+                        }
+                    }
+                },
                 actions = {
                     IconButton(
                         onClick = { viewModel.toggleShowOnlyFavorites() }
@@ -102,7 +125,8 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, viewModel: CityListView
                             CityListComposable(
                                 cities = uiState.filteredCities,
                                 onCityClick = onCityClick,
-                                onFavoriteToggle = { cityId -> viewModel.toggleFavorite(cityId) }
+                                onFavoriteToggle = { cityId -> viewModel.toggleFavorite(cityId) },
+                                onMapClick = onMapClick
                             )
                         }
                     }
@@ -123,7 +147,8 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, viewModel: CityListView
 fun CityListScreenComposablePreview() {
     MaterialTheme {
         CityListScreenComposable(
-            onCityClick = {}
+            onCityClick = {},
+            onMapClick = {}
         )
     }
 }
