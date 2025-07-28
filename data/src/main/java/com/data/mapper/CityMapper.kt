@@ -2,8 +2,9 @@ package com.data.mapper
 
 import com.data.dto.CityRemoteDto
 import com.domain.models.City
+import javax.inject.Inject
 
-class CityMapper {
+class CityMapper @Inject constructor() {
 
     fun mapToDomain(dto: CityRemoteDto, isFavorite: Boolean = false): City {
         return City(

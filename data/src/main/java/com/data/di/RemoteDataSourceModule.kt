@@ -2,18 +2,19 @@ package com.data.di
 
 import com.data.remote.CityRemoteDataSource
 import com.data.remote.CityRemoteDataSourceImpl
-import com.data.remote.api.CityApiService
+import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object RemoteDataSourceModule {
+abstract class RemoteDataSourceModule {
 
-    @Provides
-    fun provideCityRemoteDataSource(
-        api: CityApiService
-    ): CityRemoteDataSource = CityRemoteDataSourceImpl(api)
+    @Binds
+    @Singleton
+    abstract fun bindCityRemoteDataSource(
+        impl: CityRemoteDataSourceImpl
+    ): CityRemoteDataSource
 }
