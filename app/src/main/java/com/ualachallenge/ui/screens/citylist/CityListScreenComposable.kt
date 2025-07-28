@@ -1,6 +1,7 @@
 package com.ualachallenge.ui.screens.citylist
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.ExperimentalMaterialApi
@@ -28,6 +29,7 @@ import com.ualachallenge.ui.components.CityListComposable
 import com.ualachallenge.ui.components.EmptyStateScreenComposable
 import com.ualachallenge.ui.components.ErrorScreenComposable
 import com.ualachallenge.ui.components.LoadingScreenComposable
+import com.ualachallenge.ui.components.SearchBarComposable
 import com.ualachallenge.ui.viewmodel.CityListViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
@@ -66,28 +68,43 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, viewModel: CityListView
                 .padding(paddingValues)
                 .pullRefresh(pullRefreshState)
         ) {
-            // Content
-            when {
-                uiState.isLoading && uiState.cities.isEmpty() -> {
-                    LoadingScreenComposable()
-                }
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Search Bar
+                SearchBarComposable(
+                    query = uiState.searchQuery,
+                    onQueryChange = { query ->
+                        viewModel.searchCities(query)
+                    },
+                    onTrailingIconClick = {
+                        viewModel.searchCities("")
+                    }
+                )
 
-                uiState.error != null && uiState.cities.isEmpty() -> {
-                    ErrorScreenComposable(
-                        error = uiState.error!!,
-                        onRetry = { viewModel.loadCities() }
-                    )
-                }
+                // Content
+                when {
+                    uiState.isLoading && uiState.cities.isEmpty() -> {
+                        LoadingScreenComposable()
+                    }
 
-                else -> {
-                    if (uiState.filteredCities.isEmpty()) {
-                        EmptyStateScreenComposable()
-                    } else {
-                        CityListComposable(
-                            cities = uiState.filteredCities,
-                            onCityClick = onCityClick,
-                            onFavoriteToggle = { cityId -> viewModel.toggleFavorite(cityId) }
+                    uiState.error != null && uiState.cities.isEmpty() -> {
+                        ErrorScreenComposable(
+                            error = uiState.error!!,
+                            onRetry = { viewModel.loadCities() }
                         )
+                    }
+
+                    else -> {
+                        if (uiState.filteredCities.isEmpty()) {
+                            EmptyStateScreenComposable()
+                        } else {
+                            CityListComposable(
+                                cities = uiState.filteredCities,
+                                onCityClick = onCityClick,
+                                onFavoriteToggle = { cityId -> viewModel.toggleFavorite(cityId) }
+                            )
+                        }
                     }
                 }
             }
