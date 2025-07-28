@@ -1,6 +1,7 @@
 package com.ualachallenge.di
 
 import com.domain.repositories.CityRepository
+import com.domain.usecases.GetCityByIdUseCase
 import com.domain.usecases.GetFavoriteCitiesUseCase
 import com.domain.usecases.LoadAllCitiesUseCase
 import com.domain.usecases.SearchCitiesUseCase
@@ -36,4 +37,10 @@ object UseCaseModule {
     fun provideSearchCitiesUseCase(
         repository: CityRepository
     ): SearchCitiesUseCase = SearchCitiesUseCase(repository)
+
+    @Provides
+    @Singleton
+    fun provideGetCityByIdUseCase(
+        repository: CityRepository
+    ): GetCityByIdUseCase = GetCityByIdUseCase(repository)
 }

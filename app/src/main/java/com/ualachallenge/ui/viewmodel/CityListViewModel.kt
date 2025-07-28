@@ -141,12 +141,49 @@ class CityListViewModel @Inject constructor(
     }
 
     fun toggleShowOnlyFavorites() {
+        val wasShowingFavorites = uiState.value.showOnlyFavorites
+
         _uiState.update { currentState ->
             val newShowOnlyFavorites = !currentState.showOnlyFavorites
             currentState.copy(
                 showOnlyFavorites = newShowOnlyFavorites,
                 filteredCities = applyFilters(currentState.cities, currentState.searchQuery, newShowOnlyFavorites)
             )
+        }
+
+        // If switching from favorites to all cities, refresh the data
+        if (wasShowingFavorites) {
+            refreshCities()
+        }
+    }
+
+    fun refreshCities() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            when (val result = loadAllCitiesUseCase()) {
+                is Result.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            cities = result.data,
+                            filteredCities = applyFilters(result.data, it.searchQuery, it.showOnlyFavorites),
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = result.message
+                        )
+                    }
+                }
+                is Result.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
+                }
+            }
         }
     }
 
