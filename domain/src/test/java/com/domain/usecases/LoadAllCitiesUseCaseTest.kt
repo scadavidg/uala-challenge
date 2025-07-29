@@ -29,10 +29,10 @@ class LoadAllCitiesUseCaseTest {
             City(1, "Bogotá", "Colombia", 4.7110, -74.0721, true),
             City(2, "Medellín", "Colombia", 6.2442, -75.5812, false)
         )
-        coEvery { mockRepository.getAllCities() } returns Result.Success(cities)
+        coEvery { mockRepository.getAllCities(page = 1, limit = 20) } returns Result.Success(cities)
 
         // When
-        val result = useCase()
+        val result = useCase(page = 1, limit = 20)
 
         // Then
         assertTrue(result is Result.Success)
@@ -43,10 +43,10 @@ class LoadAllCitiesUseCaseTest {
     fun `invoke should return error when repository fails`() = runTest {
         // Given
         val errorMessage = "Network error"
-        coEvery { mockRepository.getAllCities() } returns Result.Error(errorMessage)
+        coEvery { mockRepository.getAllCities(page = 1, limit = 20) } returns Result.Error(errorMessage)
 
         // When
-        val result = useCase()
+        val result = useCase(page = 1, limit = 20)
 
         // Then
         assertTrue(result is Result.Error)
@@ -56,10 +56,10 @@ class LoadAllCitiesUseCaseTest {
     @Test
     fun `invoke should return empty list when repository returns empty list`() = runTest {
         // Given
-        coEvery { mockRepository.getAllCities() } returns Result.Success(emptyList())
+        coEvery { mockRepository.getAllCities(page = 1, limit = 20) } returns Result.Success(emptyList())
 
         // When
-        val result = useCase()
+        val result = useCase(page = 1, limit = 20)
 
         // Then
         assertTrue(result is Result.Success)

@@ -33,6 +33,7 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs += listOf("-Xsuppress-version-warnings")
     }
     buildFeatures {
         compose = true
@@ -92,6 +93,6 @@ dependencies {
     kapt(libs.androidx.hilt.compiler)
 
     // Google Maps
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.google.maps.android:maps-compose:4.3.0")
+    implementation(libs.play.services.maps)
+    implementation(libs.maps.compose)
 }

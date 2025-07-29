@@ -1,12 +1,21 @@
 package com.ualachallenge.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -18,12 +27,38 @@ fun CityListComposable(
     cities: List<City>,
     onCityClick: (Int) -> Unit,
     onFavoriteToggle: (Int) -> Unit,
-    onMapClick: (Int) -> Unit = {}
+    onMapClick: (Int) -> Unit = {},
+    isLoadingMore: Boolean = false,
+    hasMoreData: Boolean = false,
+    onLoadMore: (() -> Unit)? = null
 ) {
     val groupedCities = cities.groupBy { it.name.first().uppercase() }
         .toSortedMap()
 
+    val listState = rememberLazyListState()
+
+    // Detect when user reaches the end of the list
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val lastVisibleItem = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+            val totalItems = listState.layoutInfo.totalItemsCount
+
+            lastVisibleItem != null &&
+                lastVisibleItem.index >= totalItems - 3 && // Load more when 3 items away from end
+                hasMoreData &&
+                !isLoadingMore
+        }
+    }
+
+    // Trigger load more when needed
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore && onLoadMore != null) {
+            onLoadMore()
+        }
+    }
+
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
     ) {
@@ -45,6 +80,20 @@ fun CityListComposable(
                     onFavoriteToggle = { onFavoriteToggle(city.id) },
                     onMapClick = { onMapClick(city.id) }
                 )
+            }
+        }
+
+        // Show loading indicator at the bottom when loading more
+        if (isLoadingMore) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
         }
     }

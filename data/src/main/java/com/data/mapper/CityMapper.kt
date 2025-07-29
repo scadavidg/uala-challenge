@@ -17,9 +17,7 @@ class CityMapper @Inject constructor() {
         )
     }
 
-    fun mapListToDomain(dtos: List<CityRemoteDto>, favoriteIds: Set<Int>): List<City> {
-        return dtos.map { dto ->
-            mapToDomain(dto, isFavorite = dto._id in favoriteIds)
-        }
+    fun mapListToDomain(dtos: List<CityRemoteDto>, favoriteIds: Set<Int>): List<City> = dtos.map { dto ->
+        mapToDomain(dto, isFavorite = dto._id in favoriteIds)
     }
 }

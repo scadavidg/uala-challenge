@@ -56,7 +56,6 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.moshi)
     implementation(libs.moshi.kotlin)
-    kapt(libs.moshi.kotlin.codegen)
 
     // Dependency Injection (Hilt)
     implementation(libs.hilt.android)

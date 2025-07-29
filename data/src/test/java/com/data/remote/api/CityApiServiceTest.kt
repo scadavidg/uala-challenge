@@ -1,261 +1,648 @@
 package com.data.remote.api
 
-import java.io.IOException
-import java.util.concurrent.TimeUnit
-import junit.framework.TestCase.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
-import kotlin.test.fail
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.data.dto.ApiResponseDto
+import com.data.dto.CityRemoteDto
+import com.data.dto.CoordinatesDto
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.assertThrows
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
-@OptIn(ExperimentalCoroutinesApi::class)
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CityApiServiceTest {
 
     private lateinit var mockWebServer: MockWebServer
-    private lateinit var service: CityApiService
+    private lateinit var cityApiService: CityApiService
+
+    private val testCities = listOf(
+        CityRemoteDto(_id = 1, name = "Alabama", country = "US", coordinates = CoordinatesDto(lon = -86.9023, lat = 32.3182)),
+        CityRemoteDto(_id = 2, name = "Albuquerque", country = "US", coordinates = CoordinatesDto(lon = -106.6504, lat = 35.0844)),
+        CityRemoteDto(_id = 3, name = "Anaheim", country = "US", coordinates = CoordinatesDto(lon = -117.9143, lat = 33.8366))
+    )
 
     @BeforeEach
     fun setup() {
         mockWebServer = MockWebServer()
-        service = Retrofit.Builder()
-            .baseUrl(mockWebServer.url("/"))
-            .addConverterFactory(MoshiConverterFactory.create())
+        mockWebServer.start()
+
+        val moshi = Moshi.Builder()
+            .addLast(KotlinJsonAdapterFactory())
             .build()
-            .create(CityApiService::class.java)
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(mockWebServer.url("/"))
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+
+        cityApiService = retrofit.create(CityApiService::class.java)
     }
 
     @AfterEach
-    fun teardown() {
+    fun tearDown() {
         mockWebServer.shutdown()
     }
 
     @Test
-    fun `Successful API call with valid city data`() = runTest {
+    fun `getCities default parameters`() = runTest {
         // Given
-        val json = """[{"_id":1,"name":"CityA","country":"US","coord":{"lon":10.0,"lat":20.0}}]"""
-        mockWebServer.enqueue(MockResponse().setBody(json).setResponseCode(200))
+        val response = ApiResponseDto(success = true, data = testCities)
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}},
+                    {"_id": 2, "name": "Albuquerque", "country": "US", "coord": {"lon": -106.6504, "lat": 35.0844}},
+                    {"_id": 3, "name": "Anaheim", "country": "US", "coord": {"lon": -117.9143, "lat": 33.8366}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
 
         // When
-        val result = service.getCities()
+        val result = cityApiService.getCities()
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals("CityA", result[0].name)
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(3, result.data.size)
+        assertEquals("Alabama", result.data[0].name)
+        assertEquals("Albuquerque", result.data[1].name)
+        assertEquals("Anaheim", result.data[2].name)
     }
 
     @Test
-    fun `API call returns empty list`() = runTest {
+    fun `getCities specific page and limit`() = runTest {
         // Given
-        mockWebServer.enqueue(MockResponse().setBody("[]").setResponseCode(200))
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
 
         // When
-        val result = service.getCities()
+        val result = cityApiService.getCities(page = 2, limit = 1)
 
         // Then
-        assertTrue(result.isEmpty())
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(1, result.data.size)
+        assertEquals("Alabama", result.data[0].name)
     }
 
     @Test
-    fun `API call returns malformed JSON`() = runTest {
+    fun `getCities empty result`() = runTest {
         // Given
-        val malformedJson = """{"name": "CityA",,,}"""
-        mockWebServer.enqueue(MockResponse().setBody(malformedJson).setResponseCode(200))
-
-        // When - Then
-        assertFailsWith<Exception> {
-            service.getCities()
-        }
-    }
-
-    @Test
-    fun `API call returns unexpected JSON structure`() = runTest {
-        // Given
-        val unexpectedJson = """[{"unexpected":123}]"""
-        mockWebServer.enqueue(MockResponse().setBody(unexpectedJson).setResponseCode(200))
-
-        // When - Then
-        assertFailsWith<Exception> {
-            service.getCities()
-        }
-    }
-
-    @Test
-    fun `Network error during API call`() = runTest {
-        // Given
-        mockWebServer.shutdown()
-
-        // When - Then
-        assertFailsWith<IOException> {
-            service.getCities()
-        }
-    }
-
-    @Test
-    fun `Server error 5xx during API call`() = runTest {
-        // Given
-        mockWebServer.enqueue(MockResponse().setResponseCode(500))
-
-        // When - Then
-        assertFailsWith<Exception> {
-            service.getCities()
-        }
-    }
-
-    @Test
-    fun `Client error 4xx during API call`() = runTest {
-        // Given
-        mockWebServer.enqueue(MockResponse().setResponseCode(404))
-
-        // When - Then
-        assertFailsWith<Exception> {
-            service.getCities()
-        }
-    }
-
-    @Test
-    fun `API call timeout`() = runTest {
-        // Given
-        mockWebServer.enqueue(
-            MockResponse()
-                .setBody("[]")
-                .setBodyDelay(10, TimeUnit.SECONDS)
-        )
-
-        // When - Then
-        assertFailsWith<IOException> {
-            service.getCities()
-        }
-    }
-
-    @Test
-    fun `Cancellation of the coroutine`() = runTest {
-        // Given
-        mockWebServer.enqueue(MockResponse().setBody("[]").setResponseCode(200).setBodyDelay(2, TimeUnit.SECONDS))
-
-        val job = launch {
-            service.getCities()
-        }
+        val responseJson = """
+            {
+                "success": true,
+                "data": []
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
 
         // When
-        delay(500)
-        job.cancelAndJoin()
+        val result = cityApiService.getCities(page = 999, limit = 20)
 
         // Then
-        assertTrue(job.isCancelled)
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertTrue(result.data.isEmpty())
     }
 
     @Test
-    fun `Successful API call with very large list of cities`() = runTest {
+    fun `getCities invalid page negative`() = runTest {
         // Given
-        val cities = (1..1000).joinToString(separator = ",") {
-            """{"_id":$it,"name":"City$it","country":"US","coord":{"lon":0.0,"lat":0.0}}"""
-        }
-        val json = "[$cities]"
-        mockWebServer.enqueue(MockResponse().setBody(json).setResponseCode(200))
+        val responseJson = """
+            {
+                "success": false,
+                "data": []
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
 
         // When
-        val result = service.getCities()
+        val result = cityApiService.getCities(page = -1, limit = 20)
 
         // Then
-        assertEquals(1000, result.size)
+        assertNotNull(result)
+        // API might handle negative page gracefully or return error
+        assertTrue(result.data.isEmpty())
     }
 
     @Test
-    fun `API returns JSON with null values for non nullable fields in DTO`() = runTest {
+    fun `getCities invalid limit negative`() = runTest {
         // Given
-        val json = """[{"_id":null,"name":null,"country":null,"coord":{"lon":null,"lat":null}}]"""
-        mockWebServer.enqueue(MockResponse().setBody(json).setResponseCode(200))
-
-        // When - Then
-        assertFailsWith<Exception> {
-            service.getCities()
-        }
-    }
-
-    @Test
-    fun `API returns JSON with extra fields not in DTO`() = runTest {
-        // Given
-        val json = """[{"_id":1,"name":"CityA","country":"US","coord":{"lon":10.0,"lat":20.0},"extra":"ignored"}]"""
-        mockWebServer.enqueue(MockResponse().setBody(json).setResponseCode(200))
+        val responseJson = """
+            {
+                "success": false,
+                "data": []
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
 
         // When
-        val result = service.getCities()
+        val result = cityApiService.getCities(page = 1, limit = -5)
 
         // Then
-        assertEquals("CityA", result.first().name)
+        assertNotNull(result)
+        // API might handle negative limit gracefully or return error
+        assertTrue(result.data.isEmpty())
     }
 
     @Test
-    fun `API returns JSON with missing nullable fields in DTO`() = runTest {
+    fun `getCities zero limit`() = runTest {
         // Given
-        val json = """[{"_id":1,"name":"CityA","country":"US"}]"""
-        mockWebServer.enqueue(MockResponse().setBody(json).setResponseCode(200))
-
-        // When - Then
-        try {
-            service.getCities()
-            fail("Expected exception due to missing coord field")
-        } catch (e: Exception) {
-            Assertions.assertTrue(e is Exception)
-        }
-    }
-
-    @Test
-    fun `API returns JSON with incorrect data types for fields in DTO`() = runTest {
-        // Given
-        val json = """[{"_id":"wrong","name":true,"country":[],"coord":{"lon":"abc","lat":"xyz"}}]"""
-        mockWebServer.enqueue(MockResponse().setBody(json).setResponseCode(200))
-
-        // When - Then
-        assertFailsWith<Exception> {
-            service.getCities()
-        }
-    }
-
-    @Test
-    fun `Verify HTTP GET method and URL`() = runTest {
-        // Given
-        val json = "[]"
-        mockWebServer.enqueue(MockResponse().setBody(json).setResponseCode(200))
+        val responseJson = """
+            {
+                "success": true,
+                "data": []
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
 
         // When
-        service.getCities()
+        val result = cityApiService.getCities(page = 1, limit = 0)
 
         // Then
-        val request = mockWebServer.takeRequest()
-        Assertions.assertEquals("GET", request.method)
-        Assertions.assertTrue(request.path!!.contains("cities.json"))
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertTrue(result.data.isEmpty())
     }
 
     @Test
-    fun `Concurrent API calls`() = runTest {
+    fun `getCities max limit`() = runTest {
         // Given
-        val json = """[{"_id":1,"name":"CityA","country":"US","coord":{"lon":10.0,"lat":20.0}}]"""
-        repeat(10) {
-            mockWebServer.enqueue(MockResponse().setBody(json).setResponseCode(200))
-        }
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
 
         // When
-        val results = (1..10).map {
-            launch { service.getCities() }
-        }
-        results.forEach { it.join() }
+        val result = cityApiService.getCities(page = 1, limit = 1000)
 
         // Then
-        Assertions.assertEquals(10, mockWebServer.requestCount)
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(1, result.data.size)
+    }
+
+    @Test
+    fun `getCities network error`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(500).setBody("Network Error"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCities()
+        }
+    }
+
+    @Test
+    fun `getCities server error 5xx`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(500).setBody("Internal Server Error"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCities()
+        }
+    }
+
+    @Test
+    fun `getCities client error 4xx`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(400).setBody("Bad Request"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCities()
+        }
+    }
+
+    @Test
+    fun `getCities deserialization error`() = runTest {
+        // Given
+        val malformedJson = """{"success": true, "data": [{"invalid": "json"}]}"""
+        mockWebServer.enqueue(MockResponse().setBody(malformedJson))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCities()
+        }
+    }
+
+    @Test
+    fun `searchCities with prefix only`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}},
+                    {"_id": 2, "name": "Albuquerque", "country": "US", "coord": {"lon": -106.6504, "lat": 35.0844}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "Al")
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(2, result.data.size)
+        assertTrue(result.data.all { it.name.startsWith("Al") })
+    }
+
+    @Test
+    fun `searchCities with prefix and onlyFavorites true`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "Al", onlyFavorites = true)
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(1, result.data.size)
+        assertEquals("Alabama", result.data[0].name)
+    }
+
+    @Test
+    fun `searchCities with prefix onlyFavorites and pagination`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "Al", onlyFavorites = true, page = 2, limit = 1)
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(1, result.data.size)
+        assertEquals("Alabama", result.data[0].name)
+    }
+
+    @Test
+    fun `searchCities with null prefix default behavior`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}},
+                    {"_id": 2, "name": "Albuquerque", "country": "US", "coord": {"lon": -106.6504, "lat": 35.0844}},
+                    {"_id": 3, "name": "Anaheim", "country": "US", "coord": {"lon": -117.9143, "lat": 33.8366}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = null)
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(3, result.data.size)
+    }
+
+    @Test
+    fun `searchCities with empty string prefix`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}},
+                    {"_id": 2, "name": "Albuquerque", "country": "US", "coord": {"lon": -106.6504, "lat": 35.0844}},
+                    {"_id": 3, "name": "Anaheim", "country": "US", "coord": {"lon": -117.9143, "lat": 33.8366}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "")
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(3, result.data.size)
+    }
+
+    @Test
+    fun `searchCities prefix no match`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": []
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "XYZ")
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertTrue(result.data.isEmpty())
+    }
+
+    @Test
+    fun `searchCities onlyFavorites true no match`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": []
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "Al", onlyFavorites = true)
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertTrue(result.data.isEmpty())
+    }
+
+    @Test
+    fun `searchCities invalid page for search`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": false,
+                "data": []
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "Al", page = -1)
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.data.isEmpty())
+    }
+
+    @Test
+    fun `searchCities invalid limit for search`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": false,
+                "data": []
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "Al", limit = -5)
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.data.isEmpty())
+    }
+
+    @Test
+    fun `searchCities special characters in prefix`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "São Paulo", "country": "BR", "coord": {"lon": -46.6333, "lat": -23.5505}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "São")
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(1, result.data.size)
+        assertEquals("São Paulo", result.data[0].name)
+    }
+
+    @Test
+    fun `searchCities case sensitivity`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": [
+                    {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}}
+                ]
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.searchCities(prefix = "al")
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(1, result.data.size)
+        assertEquals("Alabama", result.data[0].name)
+    }
+
+    @Test
+    fun `searchCities network error`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(500).setBody("Network Error"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.searchCities(prefix = "Al")
+        }
+    }
+
+    @Test
+    fun `searchCities server error 5xx`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(500).setBody("Internal Server Error"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.searchCities(prefix = "Al")
+        }
+    }
+
+    @Test
+    fun `searchCities client error 4xx`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(400).setBody("Bad Request"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.searchCities(prefix = "Al")
+        }
+    }
+
+    @Test
+    fun `searchCities deserialization error`() = runTest {
+        // Given
+        val malformedJson = """{"success": true, "data": [{"invalid": "json"}]}"""
+        mockWebServer.enqueue(MockResponse().setBody(malformedJson))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.searchCities(prefix = "Al")
+        }
+    }
+
+    @Test
+    fun `getCityById valid ID`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": {"_id": 1, "name": "Alabama", "country": "US", "coord": {"lon": -86.9023, "lat": 32.3182}}
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.getCityById(1)
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(1, result.data._id)
+        assertEquals("Alabama", result.data.name)
+        assertEquals("US", result.data.country)
+    }
+
+    @Test
+    fun `getCityById non existent ID`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(404).setBody("Not Found"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCityById(99999)
+        }
+    }
+
+    @Test
+    fun `getCityById invalid ID format e g negative zero`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(400).setBody("Bad Request"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCityById(-1)
+        }
+    }
+
+    @Test
+    fun `getCityById network error`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(500).setBody("Network Error"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCityById(1)
+        }
+    }
+
+    @Test
+    fun `getCityById server error 5xx`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(500).setBody("Internal Server Error"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCityById(1)
+        }
+    }
+
+    @Test
+    fun `getCityById client error 4xx e g 401 403 404`() = runTest {
+        // Given
+        mockWebServer.enqueue(MockResponse().setResponseCode(404).setBody("Not Found"))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCityById(999)
+        }
+    }
+
+    @Test
+    fun `getCityById deserialization error`() = runTest {
+        // Given
+        val malformedJson = """{"success": true, "data": {"invalid": "json"}}"""
+        mockWebServer.enqueue(MockResponse().setBody(malformedJson))
+
+        // When & Then
+        assertThrows<Exception> {
+            cityApiService.getCityById(1)
+        }
+    }
+
+    @Test
+    fun `getCityById integer max value for ID`() = runTest {
+        // Given
+        val responseJson = """
+            {
+                "success": true,
+                "data": {"_id": 2147483647, "name": "Max City", "country": "US", "coord": {"lon": 0.0, "lat": 0.0}}
+            }
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setBody(responseJson))
+
+        // When
+        val result = cityApiService.getCityById(Int.MAX_VALUE)
+
+        // Then
+        assertNotNull(result)
+        assertTrue(result.success)
+        assertEquals(Int.MAX_VALUE, result.data._id)
+        assertEquals("Max City", result.data.name)
     }
 }

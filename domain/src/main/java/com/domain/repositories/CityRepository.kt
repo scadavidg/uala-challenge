@@ -4,8 +4,8 @@ import com.domain.models.City
 import com.domain.models.Result
 
 interface CityRepository {
-    /** Returns all available cities. */
-    suspend fun getAllCities(): Result<List<City>>
+    /** Returns cities with pagination support. */
+    suspend fun getAllCities(page: Int = 1, limit: Int = 20): Result<List<City>>
 
     /** Returns the cities that match the prefix. */
     suspend fun searchCities(prefix: String, onlyFavorites: Boolean = false): Result<List<City>>
@@ -18,4 +18,10 @@ interface CityRepository {
 
     /** Gets a city by ID. */
     suspend fun getCityById(cityId: Int): Result<City?>
+
+    /** Toggles online/offline mode. */
+    suspend fun toggleOnlineMode(enabled: Boolean): Result<Unit>
+
+    /** Gets current online mode status. */
+    suspend fun isOnlineMode(): Result<Boolean>
 }
