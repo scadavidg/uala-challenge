@@ -180,7 +180,7 @@ class CityListCoordinatorViewModelTest {
         // Then
         assertFalse(uiState.isLoading)
         assertEquals(testCities.size, uiState.cities.size)
-        assertEquals(testCities.size, uiState.filteredCities.size)
+        assertEquals(0, uiState.filteredCities.size) // When searching, filtered cities should be empty until results arrive
         assertTrue(uiState.error == null)
         assertEquals("test", uiState.searchQuery)
         assertTrue(uiState.isSearching)

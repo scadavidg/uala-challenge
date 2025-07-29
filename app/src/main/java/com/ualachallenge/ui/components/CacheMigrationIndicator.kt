@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -74,6 +75,28 @@ fun CacheMigrationIndicator(
                 .padding(horizontal = 8.dp),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CacheMigrationIndicatorPreview() {
+    MaterialTheme {
+        CacheMigrationIndicator(
+            progress = 75f,
+            isVisible = true
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CacheMigrationIndicatorHiddenPreview() {
+    MaterialTheme {
+        CacheMigrationIndicator(
+            progress = 50f,
+            isVisible = false
         )
     }
 }
