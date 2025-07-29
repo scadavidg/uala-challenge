@@ -89,10 +89,13 @@ fun CityListComposable(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(8.dp), // Reduced padding
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(
+                        modifier = Modifier.padding(8.dp), // Smaller size
+                        strokeWidth = 2.dp // Thinner stroke
+                    )
                 }
             }
         }

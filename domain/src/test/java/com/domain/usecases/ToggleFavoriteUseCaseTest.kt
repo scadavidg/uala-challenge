@@ -22,7 +22,7 @@ class ToggleFavoriteUseCaseTest {
     }
 
     @Test
-    fun `invoke should return success when repository succeeds`() = runTest {
+    fun `Given repository succeeds, When invoke is called, Then should return success`() = runTest {
         // Given
         val cityId = 1
         coEvery { mockRepository.toggleFavorite(cityId) } returns Result.Success(Unit)
@@ -35,7 +35,7 @@ class ToggleFavoriteUseCaseTest {
     }
 
     @Test
-    fun `invoke should return error when repository fails`() = runTest {
+    fun `Given repository fails, When invoke is called, Then should return error`() = runTest {
         // Given
         val cityId = 1
         val errorMessage = "Toggle failed"
@@ -50,7 +50,7 @@ class ToggleFavoriteUseCaseTest {
     }
 
     @Test
-    fun `invoke should call repository with correct cityId`() = runTest {
+    fun `Given cityId is provided, When invoke is called, Then should call repository with correct cityId`() = runTest {
         // Given
         val cityId = 123
         coEvery { mockRepository.toggleFavorite(cityId) } returns Result.Success(Unit)

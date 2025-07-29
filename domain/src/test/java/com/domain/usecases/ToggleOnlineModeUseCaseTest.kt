@@ -21,7 +21,7 @@ class ToggleOnlineModeUseCaseTest {
     }
 
     @Test
-    fun `invoke should return success when repository succeeds`() = runTest {
+    fun `Given repository succeeds, When invoke is called, Then should return success`() = runTest {
         // Given
         coEvery { mockRepository.toggleOnlineMode(true) } returns Result.Success(Unit)
 
@@ -33,7 +33,7 @@ class ToggleOnlineModeUseCaseTest {
     }
 
     @Test
-    fun `invoke should return error when repository fails`() = runTest {
+    fun `Given repository fails, When invoke is called, Then should return error`() = runTest {
         // Given
         val errorMessage = "Toggle failed"
         coEvery { mockRepository.toggleOnlineMode(false) } returns Result.Error(errorMessage)

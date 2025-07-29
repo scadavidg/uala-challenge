@@ -1,9 +1,11 @@
 package com.ualachallenge.di
 
 import com.domain.repositories.CityRepository
+import com.domain.repositories.DatabaseInitializationRepository
 import com.domain.usecases.GetCityByIdUseCase
 import com.domain.usecases.GetFavoriteCitiesUseCase
 import com.domain.usecases.GetOnlineModeUseCase
+import com.domain.usecases.InitializeRoomDatabaseUseCase
 import com.domain.usecases.LoadAllCitiesUseCase
 import com.domain.usecases.SearchCitiesUseCase
 import com.domain.usecases.ToggleFavoriteUseCase
@@ -45,4 +47,10 @@ object UseCaseModule {
     @Provides
     @Singleton
     fun provideGetOnlineModeUseCase(repository: CityRepository): GetOnlineModeUseCase = GetOnlineModeUseCase(repository)
+
+    @Provides
+    @Singleton
+    fun provideInitializeRoomDatabaseUseCase(
+        databaseInitializationRepository: DatabaseInitializationRepository
+    ): InitializeRoomDatabaseUseCase = InitializeRoomDatabaseUseCase(databaseInitializationRepository)
 }

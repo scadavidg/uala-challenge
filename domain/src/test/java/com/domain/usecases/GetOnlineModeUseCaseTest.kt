@@ -22,7 +22,7 @@ class GetOnlineModeUseCaseTest {
     }
 
     @Test
-    fun `invoke should return success when repository succeeds`() = runTest {
+    fun `Given repository succeeds, When invoke is called, Then should return success`() = runTest {
         // Given
         coEvery { mockRepository.isOnlineMode() } returns Result.Success(true)
 
@@ -35,7 +35,7 @@ class GetOnlineModeUseCaseTest {
     }
 
     @Test
-    fun `invoke should return error when repository fails`() = runTest {
+    fun `Given repository fails, When invoke is called, Then should return error`() = runTest {
         // Given
         val errorMessage = "Failed to get online mode"
         coEvery { mockRepository.isOnlineMode() } returns Result.Error(errorMessage)

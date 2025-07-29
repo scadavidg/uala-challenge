@@ -55,8 +55,8 @@ fun SearchBarComposable(
         trailingIcon = {
             if (isSearching) {
                 androidx.compose.material3.CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp
+                    modifier = Modifier.size(16.dp), // Smaller size
+                    strokeWidth = 1.5.dp // Thinner stroke
                 )
             } else if (query.isNotEmpty() && trailingIcon != null) {
                 IconButton(onClick = { onTrailingIconClick?.invoke() }) {

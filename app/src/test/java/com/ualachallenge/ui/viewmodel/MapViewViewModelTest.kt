@@ -14,14 +14,14 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MapViewViewModelTest {
@@ -33,7 +33,7 @@ class MapViewViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
-    @Before
+    @BeforeEach
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         getCityByIdUseCase = mockk()
@@ -42,13 +42,13 @@ class MapViewViewModelTest {
         viewModel = MapViewViewModel(getCityByIdUseCase, toggleFavoriteUseCase, savedStateHandle)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         Dispatchers.resetMain()
     }
 
     @Test
-    fun `when city is loaded successfully, uiState should contain city data`() = runTest {
+    fun `Given city is loaded successfully, When loadCityDetails is called, Then uiState should contain city data`() = runTest {
         // Given
         val testCity = City(
             id = 1,
@@ -73,7 +73,7 @@ class MapViewViewModelTest {
     }
 
     @Test
-    fun `when city is not found, uiState should contain error`() = runTest {
+    fun `Given city is not found, When loadCityDetails is called, Then uiState should contain error`() = runTest {
         // Given
         coEvery { getCityByIdUseCase(1) } returns Result.Success(null)
 
@@ -89,7 +89,7 @@ class MapViewViewModelTest {
     }
 
     @Test
-    fun `when use case returns error, uiState should contain error`() = runTest {
+    fun `Given use case returns error, When loadCityDetails is called, Then uiState should contain error`() = runTest {
         // Given
         coEvery { getCityByIdUseCase(1) } returns Result.Error("Network error")
 
@@ -105,7 +105,7 @@ class MapViewViewModelTest {
     }
 
     @Test
-    fun `when exception occurs, uiState should contain error`() = runTest {
+    fun `Given exception occurs, When loadCityDetails is called, Then uiState should contain error`() = runTest {
         // Given
         coEvery { getCityByIdUseCase(1) } throws RuntimeException("Unexpected error")
 
@@ -121,7 +121,7 @@ class MapViewViewModelTest {
     }
 
     @Test
-    fun `when toggle favorite is successful, city favorite status should be updated`() = runTest {
+    fun `Given toggle favorite is successful, When toggleFavorite is called, Then city favorite status should be updated`() = runTest {
         // Given
         val testCity = City(
             id = 1,
@@ -149,7 +149,7 @@ class MapViewViewModelTest {
     }
 
     @Test
-    fun `when toggle favorite fails, error should be set`() = runTest {
+    fun `Given toggle favorite fails, When toggleFavorite is called, Then error should be set`() = runTest {
         // Given
         val testCity = City(
             id = 1,

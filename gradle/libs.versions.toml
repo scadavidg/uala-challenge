@@ -31,6 +31,8 @@ retrofit = "3.0.0"
 converterMoshi = "3.0.0"
 moshiKotlinCodegen = "1.15.2"
 moshiKotlin = "1.15.2"
+# ROOM
+room = "2.7.0"
 # TESTING
 mockk = "1.13.8"
 turbine = "1.0.0"
@@ -74,6 +76,12 @@ retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit
 converter-moshi = { module = "com.squareup.retrofit2:converter-moshi", version.ref = "converterMoshi" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshiKotlin" }
 moshi-kotlin-codegen = { module = "com.squareup.moshi:moshi-kotlin-codegen", version.ref = "moshiKotlinCodegen" }
+okio = { module = "com.squareup.okio:okio", version = "3.8.0" }
+# ROOM
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 # TESTING
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }

@@ -1,7 +1,9 @@
 package com.ualachallenge.di
 
 import com.data.repositories.CityRepositoryImpl
+import com.data.repositories.DatabaseInitializationRepositoryImpl
 import com.domain.repositories.CityRepository
+import com.domain.repositories.DatabaseInitializationRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -17,4 +19,10 @@ abstract class RepositoryModule {
     abstract fun bindCityRepository(
         cityRepositoryImpl: CityRepositoryImpl
     ): CityRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDatabaseInitializationRepository(
+        databaseInitializationRepositoryImpl: DatabaseInitializationRepositoryImpl
+    ): DatabaseInitializationRepository
 }

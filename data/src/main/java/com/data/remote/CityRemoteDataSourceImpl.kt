@@ -10,7 +10,13 @@ import retrofit2.HttpException
 class CityRemoteDataSourceImpl @Inject constructor(private val api: CityApiService) : CityRemoteDataSource {
 
     override suspend fun downloadCities(page: Int, limit: Int): ApiResponseDto = try {
-        api.getCities(page = page, limit = limit)
+        val response = api.getCities(page = page, limit = limit)
+
+        if (!response.success) {
+            throw NetworkException("API returned success=false")
+        }
+
+        response
     } catch (e: IOException) {
         // Network error like timeout, no internet, etc.
         throw NetworkException("Network error downloading cities", e)
