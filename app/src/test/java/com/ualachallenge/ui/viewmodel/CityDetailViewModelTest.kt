@@ -1,34 +1,27 @@
 package com.ualachallenge.ui.viewmodel
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.domain.models.City
 import com.domain.models.Result
 import com.domain.usecases.GetCityByIdUseCase
 import com.domain.usecases.ToggleFavoriteUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.assertNotNull
+import org.junit.jupiter.api.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CityDetailViewModelTest {
@@ -40,7 +33,7 @@ class CityDetailViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
-    @Before
+    @BeforeEach
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         getCityByIdUseCase = mockk()
@@ -49,13 +42,13 @@ class CityDetailViewModelTest {
         viewModel = TestCityDetailViewModel(getCityByIdUseCase, toggleFavoriteUseCase, savedStateHandle)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         Dispatchers.resetMain()
     }
 
     @Test
-    fun `when city is loaded successfully, uiState should contain city data`() = runTest {
+    fun `Given city is loaded successfully, When loadCityDetails is called, Then uiState should contain city data`() = runTest {
         // Given
         val testCity = City(
             id = 1,
@@ -80,7 +73,7 @@ class CityDetailViewModelTest {
     }
 
     @Test
-    fun `when city is not found, uiState should contain error`() = runTest {
+    fun `Given city is not found, When loadCityDetails is called, Then uiState should contain error`() = runTest {
         // Given
         coEvery { getCityByIdUseCase(1) } returns Result.Success(null)
 
@@ -96,7 +89,7 @@ class CityDetailViewModelTest {
     }
 
     @Test
-    fun `when use case returns error, uiState should contain error`() = runTest {
+    fun `Given use case returns error, When loadCityDetails is called, Then uiState should contain error`() = runTest {
         // Given
         coEvery { getCityByIdUseCase(1) } returns Result.Error("Network error")
 
@@ -112,7 +105,7 @@ class CityDetailViewModelTest {
     }
 
     @Test
-    fun `when toggle favorite is successful, city favorite status should be updated`() = runTest {
+    fun `Given toggle favorite is successful, When toggleFavorite is called, Then city favorite status should be updated`() = runTest {
         // Given
         val testCity = City(
             id = 1,
@@ -140,7 +133,7 @@ class CityDetailViewModelTest {
     }
 
     @Test
-    fun `when toggle favorite fails, error should be set`() = runTest {
+    fun `Given toggle favorite fails, When toggleFavorite is called, Then error should be set`() = runTest {
         // Given
         val testCity = City(
             id = 1,
@@ -164,115 +157,5 @@ class CityDetailViewModelTest {
         // Then
         val uiState = viewModel.uiState.first()
         assertEquals("Toggle failed", uiState.error)
-    }
-}
-
-// Test version of CityDetailViewModel without Hilt
-class TestCityDetailViewModel(
-    private val getCityByIdUseCase: GetCityByIdUseCase,
-    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
-    savedStateHandle: SavedStateHandle
-) : ViewModel() {
-
-    private val cityId: Int = (savedStateHandle["cityId"] as? Int) ?: throw IllegalArgumentException("cityId must be an Int")
-
-    private val _uiState = MutableStateFlow(CityDetailUiState())
-    val uiState: StateFlow<CityDetailUiState> = _uiState.asStateFlow()
-
-    fun loadCityDetails() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-
-            try {
-                when (val result = getCityByIdUseCase(cityId)) {
-                    is Result.Success -> {
-                        result.data?.let { city ->
-                            _uiState.update {
-                                it.copy(
-                                    city = city,
-                                    isLoading = false,
-                                    error = null
-                                )
-                            }
-                        } ?: run {
-                            _uiState.update {
-                                it.copy(
-                                    isLoading = false,
-                                    error = "City not found with ID: $cityId"
-                                )
-                            }
-                        }
-                    }
-
-                    is Result.Error -> {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = "Error loading city: ${result.message}"
-                            )
-                        }
-                    }
-
-                    is Result.Loading -> {
-                        _uiState.update { it.copy(isLoading = true) }
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Unexpected error: ${e.message}"
-                    )
-                }
-            }
-        }
-    }
-
-    fun toggleFavorite() {
-        _uiState.update { it.copy(isTogglingFavorite = true, error = null) }
-
-        viewModelScope.launch {
-            try {
-                when (val result = toggleFavoriteUseCase(cityId)) {
-                    is Result.Success -> {
-                        _uiState.update { currentState ->
-                            currentState.copy(
-                                city = currentState.city?.copy(
-                                    isFavorite = !currentState.city.isFavorite
-                                ),
-                                isTogglingFavorite = false
-                            )
-                        }
-                    }
-
-                    is Result.Error -> {
-                        _uiState.update {
-                            it.copy(isTogglingFavorite = false, error = result.message)
-                        }
-                    }
-
-                    is Result.Loading -> {
-                        _uiState.update { it.copy(isTogglingFavorite = true) }
-                    }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        isTogglingFavorite = false,
-                        error = "Failed to toggle favorite: ${e.message}"
-                    )
-                }
-            }
-        }
-    }
-
-    fun navigateBack() {
-        _uiState.update { it.copy(isNavigatingBack = true, error = null) }
-
-        // Simulate a brief loading state for navigation
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(200) // Brief delay to show loading state
-            _uiState.update { it.copy(isNavigatingBack = false) }
-        }
     }
 }

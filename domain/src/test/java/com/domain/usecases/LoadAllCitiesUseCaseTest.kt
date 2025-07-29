@@ -23,7 +23,7 @@ class LoadAllCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return success with cities when repository succeeds`() = runTest {
+    fun `Given repository succeeds, When invoke is called, Then should return success with cities`() = runTest {
         // Given
         val cities = listOf(
             City(1, "Bogotá", "Colombia", 4.7110, -74.0721, true),
@@ -40,7 +40,7 @@ class LoadAllCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return error when repository fails`() = runTest {
+    fun `Given repository fails, When invoke is called, Then should return error`() = runTest {
         // Given
         val errorMessage = "Network error"
         coEvery { mockRepository.getAllCities(page = 1, limit = 20) } returns Result.Error(errorMessage)
@@ -54,7 +54,7 @@ class LoadAllCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return empty list when repository returns empty list`() = runTest {
+    fun `Given repository returns empty list, When invoke is called, Then should return empty list`() = runTest {
         // Given
         coEvery { mockRepository.getAllCities(page = 1, limit = 20) } returns Result.Success(emptyList())
 

@@ -209,7 +209,7 @@ class CityLocalDataSourceImplTest {
     }
 
     @Test
-    fun `getLocalCities loads cities from json_sorted json file`() = runTest {
+    fun `Given json_sorted file exists, When getLocalCities is called, Then should load cities from file`() = runTest {
         // Given
         val jsonString = """[{"_id":1,"name":"Test","country":"Test","coord":{"lon":1.0,"lat":1.0}}]"""
         val inputStream = ByteArrayInputStream(jsonString.toByteArray())
@@ -322,7 +322,7 @@ class CityLocalDataSourceImplTest {
     }
 
     @Test
-    fun `getLocalCities loads first few cities from json_sorted json file`() = runTest {
+    fun `Given json_sorted file contains multiple cities, When getLocalCities is called, Then should load first few cities from file`() = runTest {
         // Given
         val jsonString = """
             [

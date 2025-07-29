@@ -55,7 +55,7 @@ class CityRepositoryImplPerformanceTest {
     }
 
     @Test
-    fun getAllCities_handlesLargeDataset_under1Second() = runTest {
+    fun `Given large dataset, When getAllCities is called, Then should process under 1 second`() = runTest {
         // Given
         val largeCityList = generateLargeCityList(1000)
         val response = CitiesResponseDto(
@@ -86,7 +86,7 @@ class CityRepositoryImplPerformanceTest {
     }
 
     @Test
-    fun getAllCities_handlesMediumDataset_under500ms() = runTest {
+    fun `Given medium dataset, When getAllCities is called, Then should process under 500ms`() = runTest {
         // Given
         val mediumCityList = generateLargeCityList(500)
         val response = CitiesResponseDto(
@@ -117,7 +117,7 @@ class CityRepositoryImplPerformanceTest {
     }
 
     @Test
-    fun getAllCities_memoryEfficient_largeDataset() = runTest {
+    fun `Given large dataset, When getAllCities is called, Then should use memory efficiently`() = runTest {
         // Given
         val largeCityList = generateLargeCityList(2000)
         val response = CitiesResponseDto(
@@ -152,7 +152,7 @@ class CityRepositoryImplPerformanceTest {
     }
 
     @Test
-    fun getAllCities_sortingPerformance_largeDataset() = runTest {
+    fun `Given large dataset, When getAllCities is called, Then should sort efficiently`() = runTest {
         // Given
         val largeCityList = generateLargeCityList(1000)
         coEvery { appSettingsDataSource.isOnlineMode() } returns true
@@ -177,6 +177,75 @@ class CityRepositoryImplPerformanceTest {
         // Note: No sorting verification needed as JSON is pre-sorted
     }
 
+    @Test
+    fun `Given large dataset, When searchCities is called, Then should process under 500ms`() = runTest {
+        // Given
+        val largeCityList = generateLargeCityList(1000)
+        val searchPrefix = "City"
+        val onlyFavorites = false
+        coEvery { appSettingsDataSource.isOnlineMode() } returns false
+        coEvery { localDataSource.getLocalCities() } returns largeCityList
+        coEvery { localDataSource.getFavoriteIds() } returns emptySet()
+
+        // When
+        val startTime = System.currentTimeMillis()
+        val result = repository.searchCities(searchPrefix, onlyFavorites)
+        val processingTime = System.currentTimeMillis() - startTime
+
+        // Then
+        assertTrue("Search processing took ${processingTime}ms, expected under 500ms", processingTime < 500)
+        assertTrue(result is Result.Success)
+        val cities = (result as Result.Success).data
+        assertTrue("Should return filtered results", cities.isNotEmpty())
+    }
+
+    @Test
+    fun `Given long query, When searchCities is called, Then should return error quickly`() = runTest {
+        // Given
+        val longQuery = "a".repeat(CityRepositoryConstants.MAX_SEARCH_QUERY_LENGTH + 1)
+        val onlyFavorites = false
+
+        // When
+        val startTime = System.currentTimeMillis()
+        val result = repository.searchCities(longQuery, onlyFavorites)
+        val processingTime = System.currentTimeMillis() - startTime
+
+        // Then
+        assertTrue("Error handling took ${processingTime}ms, expected under 100ms", processingTime < 100)
+        assertTrue(result is Result.Error)
+        assertTrue((result as Result.Error).message.contains("Search query too long"))
+    }
+
+    @Test
+    fun `Given online mode with network response, When searchCities is called, Then should handle under 300ms`() = runTest {
+        // Given
+        val searchResults = generateLargeCityList(100)
+        val searchPrefix = "test"
+        val onlyFavorites = false
+        coEvery { appSettingsDataSource.isOnlineMode() } returns true
+        coEvery { 
+            remoteDataSource.searchCities(
+                prefix = searchPrefix,
+                onlyFavorites = onlyFavorites,
+                page = CityRepositoryConstants.DEFAULT_PAGE,
+                limit = CityRepositoryConstants.DEFAULT_SEARCH_LIMIT
+            ) 
+        } returns mockk {
+            coEvery { data } returns searchResults
+        }
+        coEvery { localDataSource.getFavoriteIds() } returns emptySet()
+
+        // When
+        val startTime = System.currentTimeMillis()
+        val result = repository.searchCities(searchPrefix, onlyFavorites)
+        val processingTime = System.currentTimeMillis() - startTime
+
+        // Then
+        assertTrue("Online search took ${processingTime}ms, expected under 300ms", processingTime < 300)
+        assertTrue(result is Result.Success)
+        assertEquals(searchResults.size, (result as Result.Success).data.size)
+    }
+
     private fun generateLargeCityList(size: Int): List<CityRemoteDto> = (1..size).map { index ->
         CityRemoteDto(
             _id = index,
@@ -188,4 +257,4 @@ class CityRepositoryImplPerformanceTest {
             )
         )
     }
-}
+} 

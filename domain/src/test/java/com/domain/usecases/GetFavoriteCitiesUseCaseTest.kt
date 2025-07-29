@@ -23,7 +23,7 @@ class GetFavoriteCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return favorite cities when repository succeeds`() = runTest {
+    fun `Given repository succeeds, When invoke is called, Then should return favorite cities`() = runTest {
         // Given
         val cities = listOf(
             City(1, "Bogotá", "Colombia", 4.7110, -74.0721, true),
@@ -41,7 +41,7 @@ class GetFavoriteCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return error when repository fails`() = runTest {
+    fun `Given repository fails, When invoke is called, Then should return error`() = runTest {
         // Given
         val errorMessage = "Failed to get favorites"
         coEvery { mockRepository.getFavoriteCities() } returns Result.Error(errorMessage)
@@ -55,7 +55,7 @@ class GetFavoriteCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return empty list when no favorite cities`() = runTest {
+    fun `Given no favorite cities exist, When invoke is called, Then should return empty list`() = runTest {
         // Given
         coEvery { mockRepository.getFavoriteCities() } returns Result.Success(emptyList())
 

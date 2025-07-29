@@ -15,7 +15,7 @@ class CityMapperTest {
     }
 
     @Test
-    fun `mapToDomain should convert DTO to domain model correctly`() {
+    fun `Given DTO is provided, When mapToDomain is called, Then should convert DTO to domain model correctly`() {
         // Given
         val dto = CityRemoteDto(
             _id = 1,
@@ -37,7 +37,7 @@ class CityMapperTest {
     }
 
     @Test
-    fun `mapToDomain should set isFavorite to false by default`() {
+    fun `Given DTO is provided without isFavorite parameter, When mapToDomain is called, Then should set isFavorite to false by default`() {
         // Given
         val dto = CityRemoteDto(
             _id = 2,
@@ -54,7 +54,7 @@ class CityMapperTest {
     }
 
     @Test
-    fun `mapListToDomain should convert list of DTOs to domain models`() {
+    fun `Given list of DTOs is provided, When mapListToDomain is called, Then should convert list of DTOs to domain models`() {
         // Given
         val dtos = listOf(
             CityRemoteDto(1, "Bogotá", "Colombia", CoordinatesDto(4.7110, -74.0721)),
@@ -74,7 +74,7 @@ class CityMapperTest {
     }
 
     @Test
-    fun `mapListToDomain should handle empty list`() {
+    fun `Given empty list is provided, When mapListToDomain is called, Then should handle empty list`() {
         // Given
         val dtos = emptyList<CityRemoteDto>()
         val favoriteIds = emptySet<Int>()

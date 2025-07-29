@@ -73,7 +73,6 @@ dependencies {
     implementation(libs.androidx.material)
 
     // Testing
-    testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.turbine)
@@ -86,6 +85,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     testImplementation(kotlin("test"))
 
+    // Unit tests (JUnit 5)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+
     // Dependency Injection (Hilt)
     implementation(libs.hilt.android)
     kapt(libs.hilt.android.compiler)
@@ -95,4 +98,8 @@ dependencies {
     // Google Maps
     implementation(libs.play.services.maps)
     implementation(libs.maps.compose)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

@@ -28,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -40,23 +42,65 @@ import com.ualachallenge.ui.components.LoadingOverlayComposable
 import com.ualachallenge.ui.components.LoadingScreenComposable
 import com.ualachallenge.ui.components.OnlineModeIndicatorComposable
 import com.ualachallenge.ui.components.SearchBarComposable
-import com.ualachallenge.ui.viewmodel.CityListViewModel
+import com.ualachallenge.ui.viewmodel.CityFavoritesViewModel
+import com.ualachallenge.ui.viewmodel.CityListCoordinatorViewModel
+import com.ualachallenge.ui.viewmodel.CityListDataViewModel
+import com.ualachallenge.ui.viewmodel.CityOnlineModeViewModel
+import com.ualachallenge.ui.viewmodel.CitySearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Unit = {}, viewModel: CityListViewModel = hiltViewModel()) {
-    val uiState by viewModel.uiState.collectAsState()
+fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Unit = {}) {
+    val dataViewModel: CityListDataViewModel = hiltViewModel()
+    val searchViewModel: CitySearchViewModel = hiltViewModel()
+    val favoritesViewModel: CityFavoritesViewModel = hiltViewModel()
+    val onlineModeViewModel: CityOnlineModeViewModel = hiltViewModel()
+    val coordinator = CityListCoordinatorViewModel()
+
+    // Conectar los ViewModels
+    LaunchedEffect(dataViewModel) {
+        favoritesViewModel.setDataViewModel(dataViewModel)
+    }
+
+    LaunchedEffect(searchViewModel) {
+        favoritesViewModel.setSearchViewModel(searchViewModel)
+    }
+
+    val listState by dataViewModel.listState.collectAsState()
+    val paginationState by dataViewModel.paginationState.collectAsState()
+    val searchState by searchViewModel.searchState.collectAsState()
+    val favoritesState by favoritesViewModel.favoritesState.collectAsState()
+    val favoriteCities by favoritesViewModel.favoriteCities.collectAsState()
+    val onlineModeState by onlineModeViewModel.onlineModeState.collectAsState()
+    val isOnlineMode by onlineModeViewModel.isOnlineMode.collectAsState()
+
+    // Local and mutable states for filters
+    val filtersState = remember { mutableStateOf(com.ualachallenge.ui.viewmodel.states.CityFilters()) }
+    val filters = filtersState.value
+
+    val uiState = coordinator.combineStates(
+        listState = listState,
+        paginationState = paginationState,
+        searchState = searchState,
+        favoritesState = favoritesState,
+        onlineModeState = onlineModeState,
+        filters = filters,
+        isOnlineMode = isOnlineMode,
+        favoriteCities = favoriteCities
+    )
 
     // Refresh cities when the screen becomes active
     LaunchedEffect(Unit) {
-        viewModel.loadCities()
+        dataViewModel.loadCities()
+        favoritesViewModel.loadFavoriteCities()
     }
 
     val pullRefreshState =
         rememberPullRefreshState(
             refreshing = uiState.isLoading,
             onRefresh = {
-                viewModel.loadCities()
+                dataViewModel.loadCities()
+                favoritesViewModel.loadFavoriteCities()
             }
         )
 
@@ -75,7 +119,13 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                 navigationIcon = {
                     if (uiState.showOnlyFavorites) {
                         IconButton(
-                            onClick = { viewModel.toggleShowOnlyFavorites() },
+                            onClick = {
+                                filtersState.value = filters.copy(showOnlyFavorites = false, searchQuery = "")
+                                // Clear the search
+                                searchViewModel.clearSearch()
+                                // Return to normal pagination
+                                dataViewModel.loadCities()
+                            },
                             enabled = !uiState.isTogglingFavorites
                         ) {
                             if (uiState.isTogglingFavorites) {
@@ -95,7 +145,7 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                 actions = {
                     // Online/Offline mode toggle
                     IconButton(
-                        onClick = { viewModel.toggleOnlineMode() },
+                        onClick = { onlineModeViewModel.toggleOnlineMode() },
                         enabled = !uiState.isTogglingOnlineMode
                     ) {
                         if (uiState.isTogglingOnlineMode) {
@@ -114,7 +164,18 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
 
                     // Favorites toggle
                     IconButton(
-                        onClick = { viewModel.toggleShowOnlyFavorites() },
+                        onClick = {
+                            val newShowOnlyFavorites = !uiState.showOnlyFavorites
+                            filtersState.value = filters.copy(showOnlyFavorites = newShowOnlyFavorites, searchQuery = "")
+
+                            // Clear the search
+                            searchViewModel.clearSearch()
+
+                            // If the favorites filter is activated, load all cities
+                            if (newShowOnlyFavorites) {
+                                dataViewModel.loadAllCitiesForFavorites()
+                            }
+                        },
                         enabled = !uiState.isTogglingFavorites
                     ) {
                         if (uiState.isTogglingFavorites) {
@@ -126,7 +187,11 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                             Icon(
                                 imageVector = if (uiState.showOnlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = if (uiState.showOnlyFavorites) "Show all cities" else "Show only favorites",
-                                tint = if (uiState.showOnlyFavorites) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (uiState.showOnlyFavorites) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
                             )
                         }
                     }
@@ -148,10 +213,12 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                 SearchBarComposable(
                     query = uiState.searchQuery,
                     onQueryChange = { query ->
-                        viewModel.searchCities(query)
+                        filtersState.value = filters.copy(searchQuery = query)
+                        searchViewModel.searchCities(query, uiState.showOnlyFavorites)
                     },
                     onTrailingIconClick = {
-                        viewModel.searchCities("")
+                        filtersState.value = filters.copy(searchQuery = "")
+                        searchViewModel.searchCities("", uiState.showOnlyFavorites)
                     },
                     isSearching = uiState.isSearching
                 )
@@ -165,7 +232,7 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                     uiState.error != null && uiState.cities.isEmpty() && uiState.filteredCities.isEmpty() -> {
                         ErrorScreenComposable(
                             error = uiState.error!!,
-                            onRetry = { viewModel.loadCities() }
+                            onRetry = { dataViewModel.loadCities() }
                         )
                     }
 
@@ -176,14 +243,13 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                             CityListComposable(
                                 cities = uiState.filteredCities,
                                 onCityClick = { cityId ->
-                                    viewModel.navigateToCityDetail(cityId)
                                     onCityClick(cityId)
                                 },
-                                onFavoriteToggle = { cityId -> viewModel.toggleFavorite(cityId) },
+                                onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
                                 onMapClick = onMapClick,
                                 isLoadingMore = uiState.isLoadingMore,
                                 hasMoreData = uiState.hasMoreData,
-                                onLoadMore = { viewModel.loadMoreCities() }
+                                onLoadMore = { dataViewModel.loadMoreCities() }
                             )
                         }
                     }
@@ -199,18 +265,6 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
             // Overlay de carga de pantalla completa - solo mostrar para carga inicial
             if (uiState.isLoading && uiState.cities.isEmpty()) {
                 LoadingOverlayComposable()
-            }
-
-            // Overlay de carga para navegación al detalle
-            if (uiState.isNavigatingToDetail) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.material3.CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp)
-                    )
-                }
             }
         }
     }

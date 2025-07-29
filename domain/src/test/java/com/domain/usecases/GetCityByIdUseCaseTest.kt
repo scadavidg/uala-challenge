@@ -24,7 +24,7 @@ class GetCityByIdUseCaseTest {
     }
 
     @Test
-    fun `invoke should return city when found`() = runTest {
+    fun `Given city is found, When invoke is called, Then should return city`() = runTest {
         // Given
         val city = City(1, "Bogotá", "Colombia", 4.7110, -74.0721, true)
         coEvery { mockRepository.getCityById(1) } returns Result.Success(city)
@@ -38,7 +38,7 @@ class GetCityByIdUseCaseTest {
     }
 
     @Test
-    fun `invoke should return null when city not found`() = runTest {
+    fun `Given city is not found, When invoke is called, Then should return null`() = runTest {
         // Given
         coEvery { mockRepository.getCityById(999) } returns Result.Success(null)
 
@@ -51,7 +51,7 @@ class GetCityByIdUseCaseTest {
     }
 
     @Test
-    fun `invoke should return error when repository fails`() = runTest {
+    fun `Given repository fails, When invoke is called, Then should return error`() = runTest {
         // Given
         val errorMessage = "Failed to get city"
         coEvery { mockRepository.getCityById(1) } returns Result.Error(errorMessage)
@@ -65,7 +65,7 @@ class GetCityByIdUseCaseTest {
     }
 
     @Test
-    fun `invoke should call repository with correct cityId`() = runTest {
+    fun `Given cityId is provided, When invoke is called, Then should call repository with correct cityId`() = runTest {
         // Given
         val cityId = 123
         val city = City(cityId, "Test City", "Test Country", 0.0, 0.0, false)

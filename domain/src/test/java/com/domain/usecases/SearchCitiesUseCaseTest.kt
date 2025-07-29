@@ -23,7 +23,7 @@ class SearchCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return filtered cities when repository succeeds`() = runTest {
+    fun `Given repository succeeds, When invoke is called, Then should return filtered cities`() = runTest {
         // Given
         val cities = listOf(
             City(1, "Bogotá", "Colombia", 4.7110, -74.0721, true),
@@ -40,7 +40,7 @@ class SearchCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return error when repository fails`() = runTest {
+    fun `Given repository fails, When invoke is called, Then should return error`() = runTest {
         // Given
         val errorMessage = "Search failed"
         coEvery { mockRepository.searchCities("bo", false) } returns Result.Error(errorMessage)
@@ -54,7 +54,7 @@ class SearchCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should search with onlyFavorites parameter`() = runTest {
+    fun `Given onlyFavorites parameter is true, When invoke is called, Then should search with onlyFavorites parameter`() = runTest {
         // Given
         val cities = listOf(
             City(1, "Bogotá", "Colombia", 4.7110, -74.0721, true)
@@ -70,7 +70,7 @@ class SearchCitiesUseCaseTest {
     }
 
     @Test
-    fun `invoke should return empty list when no cities match`() = runTest {
+    fun `Given no cities match search criteria, When invoke is called, Then should return empty list`() = runTest {
         // Given
         coEvery { mockRepository.searchCities("xyz", false) } returns Result.Success(emptyList())
 
