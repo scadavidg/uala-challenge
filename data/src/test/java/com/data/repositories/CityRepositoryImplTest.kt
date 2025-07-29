@@ -2,6 +2,7 @@ package com.data.repositories
 
 import com.data.dto.CityRemoteDto
 import com.data.dto.CoordinatesDto
+import com.data.local.AppSettingsDataSource
 import com.data.local.CityLocalDataSource
 import com.data.mapper.CityMapper
 import com.data.remote.CityRemoteDataSource
@@ -20,6 +21,7 @@ class CityRepositoryImplTest {
     private lateinit var repository: CityRepositoryImpl
     private lateinit var mockRemoteDataSource: CityRemoteDataSource
     private lateinit var mockLocalDataSource: CityLocalDataSource
+    private lateinit var mockAppSettingsDataSource: AppSettingsDataSource
     private lateinit var mockMapper: CityMapper
 
     private val testCities = listOf(
@@ -34,7 +36,11 @@ class CityRepositoryImplTest {
     fun setup() {
         mockRemoteDataSource = mockk()
         mockLocalDataSource = mockk()
+        mockAppSettingsDataSource = mockk()
         mockMapper = mockk()
+
+        // Setup app settings to return offline mode by default
+        coEvery { mockAppSettingsDataSource.isOnlineMode() } returns false
 
         // Setup mapper to return domain cities
         testCities.forEach { dto ->
@@ -48,13 +54,11 @@ class CityRepositoryImplTest {
             )
         }
 
-        // Setup local data source to return empty favorites
+        // Setup local data source to return empty favorites and test cities
         coEvery { mockLocalDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { mockLocalDataSource.getLocalCities() } returns testCities
 
-        // Setup remote data source to return test cities
-        coEvery { mockRemoteDataSource.downloadCities() } returns testCities
-
-        repository = CityRepositoryImpl(mockRemoteDataSource, mockLocalDataSource, mockMapper)
+        repository = CityRepositoryImpl(mockRemoteDataSource, mockLocalDataSource, mockAppSettingsDataSource, mockMapper)
     }
 
     @Test
@@ -206,7 +210,7 @@ class CityRepositoryImplTest {
         val specialCity = CityRemoteDto(_id = 6, name = "São Paulo", country = "BR", coordinates = CoordinatesDto(lon = -46.6333, lat = -23.5505))
         val allCities = testCities + specialCity
 
-        coEvery { mockRemoteDataSource.downloadCities() } returns allCities
+        coEvery { mockLocalDataSource.getLocalCities() } returns allCities
         coEvery { mockMapper.mapToDomain(specialCity, any()) } returns City(
             id = specialCity._id,
             name = specialCity.name,
@@ -224,5 +228,107 @@ class CityRepositoryImplTest {
         val cities = (result as Result.Success).data
         assertEquals(1, cities.size)
         assertEquals("São Paulo", cities.first().name)
+    }
+
+    @Test
+    fun getAllCities_offlineMode_shouldReturnLocalCities() = runTest {
+        // When
+        val result = repository.getAllCities(1, 20)
+
+        // Then
+        assertTrue(result is Result.Success)
+        val cities = (result as Result.Success).data
+        assertEquals(5, cities.size)
+    }
+
+    @Test
+    fun getAllCities_onlineMode_shouldReturnRemoteCities() = runTest {
+        // Given - Setup online mode
+        coEvery { mockAppSettingsDataSource.isOnlineMode() } returns true
+        coEvery { mockRemoteDataSource.downloadCities(page = 1, limit = 20) } returns mockk {
+            coEvery { data } returns testCities
+        }
+
+        // When
+        val result = repository.getAllCities(1, 20)
+
+        // Then
+        assertTrue(result is Result.Success)
+        val cities = (result as Result.Success).data
+        assertEquals(5, cities.size)
+    }
+
+    @Test
+    fun toggleFavorite_shouldToggleFavoriteStatus() = runTest {
+        // Given
+        val cityId = 1
+        coEvery { mockLocalDataSource.isFavorite(cityId) } returns false
+        coEvery { mockLocalDataSource.addFavorite(cityId) } returns Unit
+        coEvery { mockLocalDataSource.removeFavorite(cityId) } returns Unit
+
+        // When
+        val result = repository.toggleFavorite(cityId)
+
+        // Then
+        assertTrue(result is Result.Success)
+    }
+
+    @Test
+    fun getFavoriteCities_shouldReturnOnlyFavoriteCities() = runTest {
+        // Given
+        val favoriteIds = setOf(1, 3)
+        coEvery { mockLocalDataSource.getFavoriteIds() } returns favoriteIds
+
+        // Setup mapper to mark some cities as favorites
+        coEvery { mockMapper.mapToDomain(testCities[0], true) } returns City(
+            id = testCities[0]._id,
+            name = testCities[0].name,
+            country = testCities[0].country,
+            lat = testCities[0].coordinates.lat,
+            lon = testCities[0].coordinates.lon,
+            isFavorite = true
+        )
+        coEvery { mockMapper.mapToDomain(testCities[2], true) } returns City(
+            id = testCities[2]._id,
+            name = testCities[2].name,
+            country = testCities[2].country,
+            lat = testCities[2].coordinates.lat,
+            lon = testCities[2].coordinates.lon,
+            isFavorite = true
+        )
+
+        // When
+        val result = repository.getFavoriteCities()
+
+        // Then
+        assertTrue(result is Result.Success)
+        val cities = (result as Result.Success).data
+        assertEquals(2, cities.size)
+        assertTrue(cities.all { it.isFavorite })
+    }
+
+    @Test
+    fun toggleOnlineMode_shouldUpdateOnlineMode() = runTest {
+        // Given
+        coEvery { mockAppSettingsDataSource.setOnlineMode(any()) } returns Unit
+
+        // When
+        val result = repository.toggleOnlineMode(true)
+
+        // Then
+        assertTrue(result is Result.Success)
+    }
+
+    @Test
+    fun isOnlineMode_shouldReturnCurrentMode() = runTest {
+        // Given
+        coEvery { mockAppSettingsDataSource.isOnlineMode() } returns true
+
+        // When
+        val result = repository.isOnlineMode()
+
+        // Then
+        assertTrue(result is Result.Success)
+        assertTrue((result as Result.Success).data)
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,16 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.domain.models.City
 import com.ualachallenge.ui.components.ErrorScreenComposable
+import com.ualachallenge.ui.components.LoadingOverlayComposable
 import com.ualachallenge.ui.components.LoadingScreenComposable
 import com.ualachallenge.ui.viewmodel.CityDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CityDetailScreenComposable(
-    onNavigateBack: () -> Unit,
-    onNavigateToMap: (Int) -> Unit,
-    viewModel: CityDetailViewModel = hiltViewModel()
-) {
+fun CityDetailScreenComposable(onNavigateBack: () -> Unit, onNavigateToMap: (Int) -> Unit, viewModel: CityDetailViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -53,21 +51,44 @@ fun CityDetailScreenComposable(
             TopAppBar(
                 title = { Text("City Details") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Navigate back"
-                        )
+                    IconButton(
+                        onClick = {
+                            viewModel.navigateBack()
+                            onNavigateBack()
+                        },
+                        enabled = !uiState.isNavigatingBack
+                    ) {
+                        if (uiState.isNavigatingBack) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Navigate back"
+                            )
+                        }
                     }
                 },
                 actions = {
                     uiState.city?.let { city ->
-                        IconButton(onClick = { viewModel.toggleFavorite() }) {
-                            Icon(
-                                imageVector = if (city.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = if (city.isFavorite) "Remove from favorites" else "Add to favorites",
-                                tint = if (city.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        IconButton(
+                            onClick = { viewModel.toggleFavorite() },
+                            enabled = !uiState.isTogglingFavorite
+                        ) {
+                            if (uiState.isTogglingFavorite) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = if (city.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = if (city.isFavorite) "Remove from favorites" else "Add to favorites",
+                                    tint = if (city.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -83,12 +104,14 @@ fun CityDetailScreenComposable(
                 uiState.isLoading -> {
                     LoadingScreenComposable()
                 }
+
                 uiState.error != null -> {
                     ErrorScreenComposable(
                         error = uiState.error!!,
                         onRetry = { /* Reload city details */ }
                     )
                 }
+
                 uiState.city != null -> {
                     CityDetailContent(
                         city = uiState.city!!,
@@ -96,15 +119,16 @@ fun CityDetailScreenComposable(
                     )
                 }
             }
+            // Overlay de carga de pantalla completa
+            if (uiState.isLoading) {
+                LoadingOverlayComposable()
+            }
         }
     }
 }
 
 @Composable
-private fun CityDetailContent(
-    city: City,
-    onNavigateToMap: (Int) -> Unit
-) {
+private fun CityDetailContent(city: City, onNavigateToMap: (Int) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()

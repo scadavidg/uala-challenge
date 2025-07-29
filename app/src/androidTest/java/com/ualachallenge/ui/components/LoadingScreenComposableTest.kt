@@ -10,6 +10,9 @@ class LoadingScreenComposableTest {
 
     @Test
     fun loadingScreen_displaysSkeletonItems() {
+        // Given
+        // LoadingScreenComposable component
+
         // When
         composeTestRule.setContent {
             LoadingScreenComposable()
@@ -23,6 +26,9 @@ class LoadingScreenComposableTest {
 
     @Test
     fun loadingScreen_rendersWithoutCrashing() {
+        // Given
+        // LoadingScreenComposable component
+
         // When
         composeTestRule.setContent {
             LoadingScreenComposable()

@@ -9,6 +9,7 @@ import com.domain.usecases.GetCityByIdUseCase
 import com.domain.usecases.ToggleFavoriteUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,13 +35,11 @@ class MapViewViewModel @Inject constructor(
         }
     }
 
-    private fun isTestMode(): Boolean {
-        return try {
-            Class.forName("org.junit.Test")
-            true
-        } catch (e: ClassNotFoundException) {
-            false
-        }
+    private fun isTestMode(): Boolean = try {
+        Class.forName("org.junit.Test")
+        true
+    } catch (e: ClassNotFoundException) {
+        false
     }
 
     fun loadCityDetails() {
@@ -67,6 +66,7 @@ class MapViewViewModel @Inject constructor(
                             }
                         }
                     }
+
                     is Result.Error -> {
                         _uiState.update {
                             it.copy(
@@ -75,6 +75,7 @@ class MapViewViewModel @Inject constructor(
                             )
                         }
                     }
+
                     is Result.Loading -> {
                         _uiState.update { it.copy(isLoading = true) }
                     }
@@ -91,26 +92,50 @@ class MapViewViewModel @Inject constructor(
     }
 
     fun toggleFavorite() {
+        _uiState.update { it.copy(isTogglingFavorite = true, error = null) }
+
         viewModelScope.launch {
-            when (val result = toggleFavoriteUseCase(cityId)) {
-                is Result.Success -> {
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            city = currentState.city?.copy(
-                                isFavorite = !currentState.city.isFavorite
+            try {
+                when (val result = toggleFavoriteUseCase(cityId)) {
+                    is Result.Success -> {
+                        _uiState.update { currentState ->
+                            currentState.copy(
+                                city = currentState.city?.copy(
+                                    isFavorite = !currentState.city.isFavorite
+                                ),
+                                isTogglingFavorite = false
                             )
-                        )
+                        }
+                    }
+
+                    is Result.Error -> {
+                        _uiState.update {
+                            it.copy(isTogglingFavorite = false, error = result.message)
+                        }
+                    }
+
+                    is Result.Loading -> {
+                        _uiState.update { it.copy(isTogglingFavorite = true) }
                     }
                 }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(error = result.message)
-                    }
-                }
-                is Result.Loading -> {
-                    // Handle loading state if needed
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isTogglingFavorite = false,
+                        error = "Failed to toggle favorite: ${e.message}"
+                    )
                 }
             }
+        }
+    }
+
+    fun navigateBack() {
+        _uiState.update { it.copy(isNavigatingBack = true, error = null) }
+
+        // Simulate a brief loading state for navigation
+        viewModelScope.launch {
+            delay(200) // Brief delay to show loading state
+            _uiState.update { it.copy(isNavigatingBack = false) }
         }
     }
 }
@@ -118,5 +143,7 @@ class MapViewViewModel @Inject constructor(
 data class MapViewUiState(
     val city: City? = null,
     val isLoading: Boolean = false,
+    val isTogglingFavorite: Boolean = false,
+    val isNavigatingBack: Boolean = false,
     val error: String? = null
 )

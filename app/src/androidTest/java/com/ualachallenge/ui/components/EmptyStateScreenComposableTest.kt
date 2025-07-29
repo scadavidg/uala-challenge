@@ -11,19 +11,29 @@ class EmptyStateScreenComposableTest {
 
     @Test
     fun emptyStateScreen_displaysTitle() {
+        // Given
+        // EmptyStateScreenComposable component
+
+        // When
         composeTestRule.setContent {
             EmptyStateScreenComposable()
         }
 
+        // Then
         composeTestRule.onNodeWithText("No cities available").assertExists()
     }
 
     @Test
     fun emptyStateScreen_displaysSubtitle() {
+        // Given
+        // EmptyStateScreenComposable component
+
+        // When
         composeTestRule.setContent {
             EmptyStateScreenComposable()
         }
 
+        // Then
         composeTestRule.onNodeWithText("Check your internet connection").assertExists()
     }
 }

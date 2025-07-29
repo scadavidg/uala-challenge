@@ -47,10 +47,7 @@ import com.ualachallenge.ui.viewmodel.MapViewViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapViewScreenComposable(
-    onNavigateBack: () -> Unit,
-    viewModel: MapViewViewModel = hiltViewModel()
-) {
+fun MapViewScreenComposable(onNavigateBack: () -> Unit, viewModel: MapViewViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -58,11 +55,24 @@ fun MapViewScreenComposable(
             TopAppBar(
                 title = { Text("Map View") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Navigate back"
-                        )
+                    IconButton(
+                        onClick = {
+                            viewModel.navigateBack()
+                            onNavigateBack()
+                        },
+                        enabled = !uiState.isNavigatingBack
+                    ) {
+                        if (uiState.isNavigatingBack) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "Navigate back"
+                            )
+                        }
                     }
                 }
             )
@@ -77,18 +87,22 @@ fun MapViewScreenComposable(
                 uiState.isLoading -> {
                     LoadingScreenComposable()
                 }
+
                 uiState.error != null -> {
                     ErrorScreenComposable(
                         error = uiState.error!!,
                         onRetry = { viewModel.loadCityDetails() }
                     )
                 }
+
                 uiState.city != null -> {
                     MapWithFloatingCard(
                         city = uiState.city!!,
-                        onToggleFavorite = { viewModel.toggleFavorite() }
+                        onToggleFavorite = { viewModel.toggleFavorite() },
+                        isTogglingFavorite = uiState.isTogglingFavorite
                     )
                 }
+
                 else -> {
                     // Placeholder for when city is not available
                     Column(
@@ -136,10 +150,7 @@ fun MapViewScreenComposable(
 }
 
 @Composable
-private fun MapWithFloatingCard(
-    city: City,
-    onToggleFavorite: () -> Unit = {}
-) {
+private fun MapWithFloatingCard(city: City, onToggleFavorite: () -> Unit = {}, isTogglingFavorite: Boolean = false) {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -155,7 +166,8 @@ private fun MapWithFloatingCard(
         ) {
             FloatingCityCard(
                 city = city,
-                onToggleFavorite = onToggleFavorite
+                onToggleFavorite = onToggleFavorite,
+                isTogglingFavorite = isTogglingFavorite
             )
         }
     }
@@ -189,10 +201,7 @@ private fun MapContent(city: City) {
 }
 
 @Composable
-private fun FloatingCityCard(
-    city: City,
-    onToggleFavorite: () -> Unit = {}
-) {
+private fun FloatingCityCard(city: City, onToggleFavorite: () -> Unit = {}, isTogglingFavorite: Boolean = false) {
     Card(
         modifier = Modifier
             .fillMaxWidth(0.85f)
@@ -228,13 +237,21 @@ private fun FloatingCityCard(
                 }
 
                 IconButton(
-                    onClick = onToggleFavorite
+                    onClick = onToggleFavorite,
+                    enabled = !isTogglingFavorite
                 ) {
-                    Icon(
-                        imageVector = if (city.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = if (city.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (city.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (isTogglingFavorite) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = if (city.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (city.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = if (city.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 

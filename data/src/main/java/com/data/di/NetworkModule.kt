@@ -2,6 +2,7 @@ package com.data.di
 
 import com.data.remote.api.CityApiService
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,7 +16,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://gist.githubusercontent.com/"
+    private const val BASE_URL = "https://web-production-aab06.up.railway.app/"
 
     @Provides
     @Singleton
@@ -23,20 +24,18 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideMoshi(): Moshi = Moshi.Builder().build()
+    fun provideMoshi(): Moshi = Moshi.Builder()
+        .addLast(KotlinJsonAdapterFactory())
+        .build()
 
     @Provides
     @Singleton
-    fun provideRetrofit(moshi: Moshi): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-    }
+    fun provideRetrofit(moshi: Moshi): Retrofit = Retrofit.Builder()
+        .baseUrl(BASE_URL)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .build()
 
     @Provides
     @Singleton
-    fun provideCityApiService(retrofit: Retrofit): CityApiService {
-        return retrofit.create(CityApiService::class.java)
-    }
+    fun provideCityApiService(retrofit: Retrofit): CityApiService = retrofit.create(CityApiService::class.java)
 }

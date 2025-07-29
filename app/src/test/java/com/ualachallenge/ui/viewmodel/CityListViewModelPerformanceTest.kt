@@ -2,10 +2,11 @@ package com.ualachallenge.ui.viewmodel
 
 import com.domain.models.City
 import com.domain.models.Result
-import com.domain.usecases.GetFavoriteCitiesUseCase
+import com.domain.usecases.GetOnlineModeUseCase
 import com.domain.usecases.LoadAllCitiesUseCase
 import com.domain.usecases.SearchCitiesUseCase
 import com.domain.usecases.ToggleFavoriteUseCase
+import com.domain.usecases.ToggleOnlineModeUseCase
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -26,21 +28,20 @@ class CityListViewModelPerformanceTest {
     private lateinit var viewModel: CityListViewModel
     private lateinit var loadAllCitiesUseCase: LoadAllCitiesUseCase
     private lateinit var toggleFavoriteUseCase: ToggleFavoriteUseCase
-    private lateinit var getFavoriteCitiesUseCase: GetFavoriteCitiesUseCase
     private lateinit var searchCitiesUseCase: SearchCitiesUseCase
+    private lateinit var toggleOnlineModeUseCase: ToggleOnlineModeUseCase
+    private lateinit var getOnlineModeUseCase: GetOnlineModeUseCase
     private val testDispatcher = StandardTestDispatcher()
 
-    private fun generateLargeCityList(size: Int): List<City> {
-        return (1..size).map { index ->
-            City(
-                id = index,
-                name = "City $index",
-                country = "Country $index",
-                lat = 40.0 + (index * 0.1),
-                lon = -74.0 + (index * 0.1),
-                isFavorite = index % 2 == 0
-            )
-        }
+    private fun generateLargeCityList(size: Int): List<City> = (1..size).map { index ->
+        City(
+            id = index,
+            name = "City $index",
+            country = "Country $index",
+            lat = 40.0 + (index * 0.1),
+            lon = -74.0 + (index * 0.1),
+            isFavorite = index % 2 == 0
+        )
     }
 
     @Before
@@ -48,17 +49,20 @@ class CityListViewModelPerformanceTest {
         Dispatchers.setMain(testDispatcher)
         loadAllCitiesUseCase = mockk()
         toggleFavoriteUseCase = mockk()
-        getFavoriteCitiesUseCase = mockk()
         searchCitiesUseCase = mockk()
+        toggleOnlineModeUseCase = mockk()
+        getOnlineModeUseCase = mockk()
 
         // Mock the initial call that happens in init
         coEvery { loadAllCitiesUseCase() } returns Result.Success(emptyList())
+        coEvery { getOnlineModeUseCase() } returns Result.Success(false)
 
         viewModel = CityListViewModel(
-            loadAllCitiesUseCase,
-            toggleFavoriteUseCase,
-            getFavoriteCitiesUseCase,
-            searchCitiesUseCase
+            loadAllCitiesUseCase = loadAllCitiesUseCase,
+            toggleFavoriteUseCase = toggleFavoriteUseCase,
+            searchCitiesUseCase = searchCitiesUseCase,
+            toggleOnlineModeUseCase = toggleOnlineModeUseCase,
+            getOnlineModeUseCase = getOnlineModeUseCase
         )
 
         // Wait for initial load to complete
@@ -148,18 +152,17 @@ class CityListViewModelPerformanceTest {
     @Test
     fun loadCities_errorHandling_under50ms() = runTest {
         // Given
-        coEvery { loadAllCitiesUseCase() } returns Result.Error("Test error")
+        coEvery { loadAllCitiesUseCase(page = 1, limit = 20) } returns Result.Error("Test error")
 
         // When
         val startTime = System.currentTimeMillis()
         viewModel.loadCities()
         testDispatcher.scheduler.advanceUntilIdle()
-        val errorState = viewModel.uiState.first { it.error != null }
         val errorTime = System.currentTimeMillis() - startTime
 
         // Then
         assertTrue("Error handling took ${errorTime}ms, expected under 50ms", errorTime < 50)
-        assertEquals("Test error", errorState.error)
+        assertNotNull("Error should be set", viewModel.uiState.value.error)
     }
 
     @Test

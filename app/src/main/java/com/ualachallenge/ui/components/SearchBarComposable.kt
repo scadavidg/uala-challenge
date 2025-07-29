@@ -2,6 +2,7 @@ package com.ualachallenge.ui.components
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -31,7 +32,8 @@ fun SearchBarComposable(
     placeholder: String = "Search cities...",
     leadingIcon: ImageVector = Icons.Default.Search,
     trailingIcon: ImageVector? = Icons.Default.Clear,
-    onTrailingIconClick: (() -> Unit)? = null
+    onTrailingIconClick: (() -> Unit)? = null,
+    isSearching: Boolean = false
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequester = FocusRequester()
@@ -51,7 +53,12 @@ fun SearchBarComposable(
             )
         },
         trailingIcon = {
-            if (query.isNotEmpty() && trailingIcon != null) {
+            if (isSearching) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
+                )
+            } else if (query.isNotEmpty() && trailingIcon != null) {
                 IconButton(onClick = { onTrailingIconClick?.invoke() }) {
                     Icon(
                         imageVector = trailingIcon,

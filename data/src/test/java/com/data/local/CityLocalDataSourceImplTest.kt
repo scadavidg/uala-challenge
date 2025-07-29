@@ -1,9 +1,14 @@
 package com.data.local
 
+import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import com.data.dto.CityRemoteDto
+import io.mockk.every
+import io.mockk.mockk
+import java.io.ByteArrayInputStream
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +22,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -31,6 +37,7 @@ class CityLocalDataSourceImplTest {
     lateinit var tempDir: File
 
     private lateinit var dataStore: DataStore<Preferences>
+    private lateinit var context: Context
     private lateinit var dataSource: CityLocalDataSource
     private lateinit var scope: CoroutineScope
     private val FAVORITES_KEY = CityLocalDataSourceImpl.FAVORITES_KEY
@@ -45,8 +52,11 @@ class CityLocalDataSourceImplTest {
         // We create the unique datastore instance per test
         dataStore = PreferenceDataStoreFactory.create(scope = scope) { file }
 
-        // We inject the datastore into your class under test
-        dataSource = CityLocalDataSourceImpl(dataStore)
+        // Mock the context with relaxed mode
+        context = mockk(relaxed = true)
+
+        // We inject the datastore and context into your class under test
+        dataSource = CityLocalDataSourceImpl(dataStore, context)
     }
 
     @AfterEach
@@ -196,5 +206,148 @@ class CityLocalDataSourceImplTest {
         // Then the DataStore remains empty or the key is not present
         val result = dataStore.data.first()[FAVORITES_KEY]
         assertTrue(result?.isEmpty() ?: true)
+    }
+
+    @Test
+    fun `getLocalCities loads cities from json_sorted json file`() = runTest {
+        // Given
+        val jsonString = """[{"_id":1,"name":"Test","country":"Test","coord":{"lon":1.0,"lat":1.0}}]"""
+        val inputStream = ByteArrayInputStream(jsonString.toByteArray())
+        val mockAssets = mockk<android.content.res.AssetManager>(relaxed = true)
+        every { context.assets } returns mockAssets
+        every { mockAssets.open("json_sorted.json") } returns inputStream
+
+        // Re-initialize dataSource with the mocked context
+        dataSource = CityLocalDataSourceImpl(dataStore, context)
+
+        // When
+        val result = dataSource.getLocalCities()
+
+        // Then
+        assertEquals(1, result.size)
+    }
+
+    @Test
+    fun `test mock setup`() = runTest {
+        // Given
+        val jsonString = """[{"_id":1,"name":"Test","country":"Test","coord":{"lon":1.0,"lat":1.0}}]"""
+        val inputStream = ByteArrayInputStream(jsonString.toByteArray())
+        val mockAssets = mockk<android.content.res.AssetManager>(relaxed = true)
+        every { context.assets } returns mockAssets
+        every { mockAssets.open("json_sorted.json") } returns inputStream
+
+        // When
+        val testStream = context.assets.open("json_sorted.json")
+        val testContent = testStream.bufferedReader().use { it.readText() }
+
+        // Then
+        assertEquals(jsonString, testContent)
+    }
+
+    @Test
+    fun `test JSON parsing`() = runTest {
+        // Given
+        val jsonString = """[{"_id":1,"name":"Test","country":"Test","coord":{"lon":1.0,"lat":1.0}}]"""
+        val inputStream = ByteArrayInputStream(jsonString.toByteArray())
+        val mockAssets = mockk<android.content.res.AssetManager>(relaxed = true)
+        every { context.assets } returns mockAssets
+        every { mockAssets.open("json_sorted.json") } returns inputStream
+
+        // Re-initialize dataSource with the mocked context
+        dataSource = CityLocalDataSourceImpl(dataStore, context)
+
+        // When
+        val result = dataSource.getLocalCities()
+
+        // Then
+        assertEquals(1, result.size)
+        assertEquals(1, result[0]._id)
+        assertEquals("Test", result[0].name)
+        assertEquals("Test", result[0].country)
+        assertEquals(1.0, result[0].coordinates.lon)
+        assertEquals(1.0, result[0].coordinates.lat)
+    }
+
+    @Test
+    fun `test direct JSON parsing`() = runTest {
+        // Given
+        val jsonString = """[{"_id":1,"name":"Test","country":"Test","coord":{"lon":1.0,"lat":1.0}}]"""
+
+        // When - Parse JSON directly
+        val moshi = com.squareup.moshi.Moshi.Builder()
+            .addLast(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory())
+            .build()
+        val type = com.squareup.moshi.Types.newParameterizedType(List::class.java, com.data.dto.CityRemoteDto::class.java)
+        val adapter = moshi.adapter<List<com.data.dto.CityRemoteDto>>(type)
+        val result = adapter.fromJson(jsonString)
+
+        // Then
+        assertNotNull(result)
+        assertEquals(1, result!!.size)
+        assertEquals(1, result[0]._id)
+        assertEquals("Test", result[0].name)
+        assertEquals("Test", result[0].country)
+        assertEquals(1.0, result[0].coordinates.lon)
+        assertEquals(1.0, result[0].coordinates.lat)
+    }
+
+    @Test
+    fun `getLocalCities returns empty list when file cannot be read`() = runTest {
+        // Given
+        val mockAssets = mockk<android.content.res.AssetManager>()
+        every { context.assets } returns mockAssets
+        every { mockAssets.open("json_sorted.json") } throws Exception("File not found")
+
+        // When
+        val result = dataSource.getLocalCities()
+
+        // Then
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `getLocalCities returns empty list for malformed JSON`() = runTest {
+        // Given
+        val malformedJson = "[{\"name\": \"Test\",,,}]"
+        val inputStream = ByteArrayInputStream(malformedJson.toByteArray())
+        val mockAssets = mockk<android.content.res.AssetManager>()
+        every { context.assets } returns mockAssets
+        every { mockAssets.open("json_sorted.json") } returns inputStream
+
+        // When
+        val result = dataSource.getLocalCities()
+
+        // Then
+        assertTrue(result.isEmpty())
+    }
+
+    @Test
+    fun `getLocalCities loads first few cities from json_sorted json file`() = runTest {
+        // Given
+        val jsonString = """
+            [
+                {"_id":1,"name":"'t Zand","country":"NL","coord":{"lon":4.7556,"lat":52.8367}},
+                {"_id":2,"name":"'t Hoeksken","country":"BE","coord":{"lon":3.9667,"lat":50.8000}},
+                {"_id":3,"name":"665 Site Colonia","country":"US","coord":{"lon":-98.0333,"lat":27.7303}},
+                {"_id":4,"name":"A Coruna","country":"ES","coord":{"lon":-8.3961,"lat":43.3713}},
+                {"_id":5,"name":"Aachen","country":"DE","coord":{"lon":6.0833,"lat":50.7833}}
+            ]
+        """.trimIndent()
+
+        val inputStream = ByteArrayInputStream(jsonString.toByteArray())
+        val mockAssets = mockk<android.content.res.AssetManager>()
+        every { context.assets } returns mockAssets
+        every { mockAssets.open("json_sorted.json") } returns inputStream
+
+        // When
+        val result = dataSource.getLocalCities()
+
+        // Then
+        assertEquals(5, result.size)
+        assertEquals("'t Zand", result[0].name)
+        assertEquals("'t Hoeksken", result[1].name)
+        assertEquals("665 Site Colonia", result[2].name)
+        assertEquals("A Coruna", result[3].name)
+        assertEquals("Aachen", result[4].name)
     }
 }
