@@ -20,7 +20,7 @@ class CityLocalDataSourceImpl @Inject constructor(private val dataStore: DataSto
     companion object {
         val FAVORITES_KEY = stringSetPreferencesKey("favorite_city_ids")
         val FAVORITES_DATA_KEY = stringSetPreferencesKey("favorite_cities_data")
-        private const val CITIES_JSON_FILE = "json_sorted"
+        private const val CITIES_JSON_FILE = "json_sorted_min"
     }
 
     override suspend fun getFavoriteIds(): Set<Int> {
@@ -113,7 +113,7 @@ class CityLocalDataSourceImpl @Inject constructor(private val dataStore: DataSto
     }
 
     override suspend fun getLocalCities(): List<CityRemoteDto> = try {
-        val jsonString = context.assets.open("json_sorted.json").bufferedReader().use { it.readText() }
+        val jsonString = context.assets.open("json_sorted_min_min.json").bufferedReader().use { it.readText() }
         val moshi = Moshi.Builder()
             .addLast(KotlinJsonAdapterFactory())
             .build()

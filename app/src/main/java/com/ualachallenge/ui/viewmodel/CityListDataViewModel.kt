@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class CityListDataViewModel @Inject constructor(private val loadAllCitiesUseCase: LoadAllCitiesUseCase) : ViewModel() {
+class CityListDataViewModel @Inject constructor(
+    private val loadAllCitiesUseCase: LoadAllCitiesUseCase
+) : ViewModel() {
 
     private val _cities = MutableStateFlow<List<City>>(emptyList())
     val cities: StateFlow<List<City>> = _cities.asStateFlow()
@@ -36,7 +38,14 @@ class CityListDataViewModel @Inject constructor(private val loadAllCitiesUseCase
     }
 
     fun loadCities() {
-        loadCitiesData(page = 1, isRefresh = false)
+        // Don't show loading state immediately if we're in migration
+        // This allows the UI to be interactive during cache migration
+        loadCitiesData(page = 1, isRefresh = false, showLoadingImmediately = false)
+    }
+
+    // New method to reload data when migration completes
+    fun reloadDataAfterMigration() {
+        loadCitiesData(page = 1, isRefresh = true, showLoadingImmediately = true)
     }
 
     fun loadMoreCities() {
@@ -47,7 +56,7 @@ class CityListDataViewModel @Inject constructor(private val loadAllCitiesUseCase
 
         loadMoreJob?.cancel()
         loadMoreJob = viewModelScope.launch {
-            loadCitiesData(page = currentState.currentPage + 1, isRefresh = false)
+            loadCitiesData(page = currentState.currentPage + 1, isRefresh = false, showLoadingImmediately = true)
         }
     }
 
@@ -86,9 +95,11 @@ class CityListDataViewModel @Inject constructor(private val loadAllCitiesUseCase
         }
     }
 
-    fun loadCitiesData(page: Int, isRefresh: Boolean) {
+    fun loadCitiesData(page: Int, isRefresh: Boolean, showLoadingImmediately: Boolean = true) {
         viewModelScope.launch {
-            updateLoadingState(page, isRefresh)
+            if (showLoadingImmediately) {
+                updateLoadingState(page, isRefresh)
+            }
 
             when (val result = loadAllCitiesUseCase(page = page)) {
                 is Result.Success -> {
@@ -124,21 +135,38 @@ class CityListDataViewModel @Inject constructor(private val loadAllCitiesUseCase
         }
 
         _cities.update { allCities }
+
+        // If we got empty results and this is the first page, it might be a network issue
+        if (allCities.isEmpty() && page == 1) {
+        }
+
         _listState.update { CityListState.Success(allCities) }
+
         _paginationState.update {
             it.copy(
-                currentPage = page,
-                hasMoreData = newCities.isNotEmpty() && newCities.size >= 20,
+                currentPage = if (page == 1) 1 else it.currentPage,
+                hasMoreData = newCities.isNotEmpty(),
                 isLoadingMore = false
             )
         }
+
+        // Notify that data loading is complete (for overlay synchronization)
+        onDataLoadingComplete?.invoke()
     }
 
     private fun handleError(errorMessage: String) {
         _listState.update { CityListState.Error(errorMessage) }
-        _paginationState.update {
-            it.copy(isLoadingMore = false)
-        }
+        _paginationState.update { it.copy(isLoadingMore = false) }
+
+        // Notify that data loading is complete (for overlay synchronization)
+        onDataLoadingComplete?.invoke()
+    }
+
+    // Callback for data loading completion
+    private var onDataLoadingComplete: (() -> Unit)? = null
+
+    fun setDataLoadingCompleteCallback(callback: () -> Unit) {
+        onDataLoadingComplete = callback
     }
 
     fun updateCityFavoriteStatus(cityId: Int, isFavorite: Boolean) {

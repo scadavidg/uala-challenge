@@ -22,7 +22,7 @@ fun LoadingScreenComposable() {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
     ) {
-        items(10) {
+        items(5) { // Reduced from 10 to 5 skeleton items
             SkeletonCityItemComposable()
         }
     }
@@ -41,29 +41,29 @@ fun SkeletonCityItemComposable() {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(20.dp)
+                    .height(18.dp) // Slightly smaller
                     .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), // More subtle
                         shape = MaterialTheme.shapes.small
                     )
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp)) // Reduced spacing
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.7f)
-                    .height(16.dp)
+                    .fillMaxWidth(0.6f) // Smaller width
+                    .height(14.dp) // Smaller height
                     .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), // More subtle
                         shape = MaterialTheme.shapes.small
                     )
             )
             Spacer(modifier = Modifier.height(4.dp))
             Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.5f)
-                    .height(14.dp)
+                    .fillMaxWidth(0.4f) // Smaller width
+                    .height(12.dp) // Smaller height
                     .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), // More subtle
                         shape = MaterialTheme.shapes.small
                     )
             )

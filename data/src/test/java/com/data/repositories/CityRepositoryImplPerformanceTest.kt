@@ -223,13 +223,13 @@ class CityRepositoryImplPerformanceTest {
         val searchPrefix = "test"
         val onlyFavorites = false
         coEvery { appSettingsDataSource.isOnlineMode() } returns true
-        coEvery { 
+        coEvery {
             remoteDataSource.searchCities(
                 prefix = searchPrefix,
                 onlyFavorites = onlyFavorites,
                 page = CityRepositoryConstants.DEFAULT_PAGE,
                 limit = CityRepositoryConstants.DEFAULT_SEARCH_LIMIT
-            ) 
+            )
         } returns mockk {
             coEvery { data } returns searchResults
         }
@@ -257,4 +257,4 @@ class CityRepositoryImplPerformanceTest {
             )
         )
     }
-} 
+}

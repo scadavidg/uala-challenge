@@ -8,4 +8,4 @@ object CityRepositoryConstants {
     const val DEFAULT_SEARCH_LIMIT = 100
     const val DEFAULT_PAGE_SIZE = 20
     const val DEFAULT_PAGE = 1
-} 
+}

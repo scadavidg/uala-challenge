@@ -11,12 +11,12 @@ import com.domain.models.City
 import com.domain.models.Result
 import io.mockk.coEvery
 import io.mockk.mockk
+import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.io.IOException
 
 class CityRepositoryImplTest {
 
@@ -290,13 +290,13 @@ class CityRepositoryImplTest {
         val searchPrefix = "test"
         val onlyFavorites = false
         coEvery { mockAppSettingsDataSource.isOnlineMode() } returns true
-        coEvery { 
+        coEvery {
             mockRemoteDataSource.searchCities(
                 prefix = searchPrefix,
                 onlyFavorites = onlyFavorites,
                 page = CityRepositoryConstants.DEFAULT_PAGE,
                 limit = CityRepositoryConstants.DEFAULT_SEARCH_LIMIT
-            ) 
+            )
         } returns mockk {
             coEvery { data } returns testCities
         }
@@ -317,8 +317,8 @@ class CityRepositoryImplTest {
         val searchPrefix = "test"
         val onlyFavorites = false
         coEvery { mockAppSettingsDataSource.isOnlineMode() } returns true
-        coEvery { 
-            mockRemoteDataSource.searchCities(any(), any(), any(), any()) 
+        coEvery {
+            mockRemoteDataSource.searchCities(any(), any(), any(), any())
         } throws NetworkException("Connection failed")
 
         // When
@@ -335,8 +335,8 @@ class CityRepositoryImplTest {
         val searchPrefix = "test"
         val onlyFavorites = false
         coEvery { mockAppSettingsDataSource.isOnlineMode() } returns true
-        coEvery { 
-            mockRemoteDataSource.searchCities(any(), any(), any(), any()) 
+        coEvery {
+            mockRemoteDataSource.searchCities(any(), any(), any(), any())
         } throws IOException("Socket timeout")
 
         // When
@@ -515,7 +515,7 @@ class CityRepositoryImplTest {
             CityRemoteDto(_id = 2, name = "Alpha", country = "US", coordinates = CoordinatesDto(lon = 0.0, lat = 0.0)),
             CityRemoteDto(_id = 3, name = "Beta", country = "US", coordinates = CoordinatesDto(lon = 0.0, lat = 0.0))
         )
-        
+
         coEvery { mockLocalDataSource.getLocalCities() } returns unsortedCities
         coEvery { mockMapper.mapToDomain(any(), any()) } answers {
             val dto = firstArg<CityRemoteDto>()

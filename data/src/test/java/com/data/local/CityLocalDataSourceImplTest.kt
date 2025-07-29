@@ -209,13 +209,13 @@ class CityLocalDataSourceImplTest {
     }
 
     @Test
-    fun `Given json_sorted file exists, When getLocalCities is called, Then should load cities from file`() = runTest {
+    fun `Given json_sorted_min file exists, When getLocalCities is called, Then should load cities from file`() = runTest {
         // Given
         val jsonString = """[{"_id":1,"name":"Test","country":"Test","coord":{"lon":1.0,"lat":1.0}}]"""
         val inputStream = ByteArrayInputStream(jsonString.toByteArray())
         val mockAssets = mockk<android.content.res.AssetManager>(relaxed = true)
         every { context.assets } returns mockAssets
-        every { mockAssets.open("json_sorted.json") } returns inputStream
+        every { mockAssets.open("json_sorted_min.json") } returns inputStream
 
         // Re-initialize dataSource with the mocked context
         dataSource = CityLocalDataSourceImpl(dataStore, context)
@@ -234,10 +234,10 @@ class CityLocalDataSourceImplTest {
         val inputStream = ByteArrayInputStream(jsonString.toByteArray())
         val mockAssets = mockk<android.content.res.AssetManager>(relaxed = true)
         every { context.assets } returns mockAssets
-        every { mockAssets.open("json_sorted.json") } returns inputStream
+        every { mockAssets.open("json_sorted_min.json") } returns inputStream
 
         // When
-        val testStream = context.assets.open("json_sorted.json")
+        val testStream = context.assets.open("json_sorted_min.json")
         val testContent = testStream.bufferedReader().use { it.readText() }
 
         // Then
@@ -251,7 +251,7 @@ class CityLocalDataSourceImplTest {
         val inputStream = ByteArrayInputStream(jsonString.toByteArray())
         val mockAssets = mockk<android.content.res.AssetManager>(relaxed = true)
         every { context.assets } returns mockAssets
-        every { mockAssets.open("json_sorted.json") } returns inputStream
+        every { mockAssets.open("json_sorted_min.json") } returns inputStream
 
         // Re-initialize dataSource with the mocked context
         dataSource = CityLocalDataSourceImpl(dataStore, context)
@@ -296,7 +296,7 @@ class CityLocalDataSourceImplTest {
         // Given
         val mockAssets = mockk<android.content.res.AssetManager>()
         every { context.assets } returns mockAssets
-        every { mockAssets.open("json_sorted.json") } throws Exception("File not found")
+        every { mockAssets.open("json_sorted_min.json") } throws Exception("File not found")
 
         // When
         val result = dataSource.getLocalCities()
@@ -312,7 +312,7 @@ class CityLocalDataSourceImplTest {
         val inputStream = ByteArrayInputStream(malformedJson.toByteArray())
         val mockAssets = mockk<android.content.res.AssetManager>()
         every { context.assets } returns mockAssets
-        every { mockAssets.open("json_sorted.json") } returns inputStream
+        every { mockAssets.open("json_sorted_min_min.json") } returns inputStream
 
         // When
         val result = dataSource.getLocalCities()
@@ -322,9 +322,10 @@ class CityLocalDataSourceImplTest {
     }
 
     @Test
-    fun `Given json_sorted file contains multiple cities, When getLocalCities is called, Then should load first few cities from file`() = runTest {
-        // Given
-        val jsonString = """
+    fun `Given json_sorted_min file contains multiple cities, When getLocalCities is called, Then should load first few cities from file`() =
+        runTest {
+            // Given
+            val jsonString = """
             [
                 {"_id":1,"name":"'t Zand","country":"NL","coord":{"lon":4.7556,"lat":52.8367}},
                 {"_id":2,"name":"'t Hoeksken","country":"BE","coord":{"lon":3.9667,"lat":50.8000}},
@@ -332,22 +333,22 @@ class CityLocalDataSourceImplTest {
                 {"_id":4,"name":"A Coruna","country":"ES","coord":{"lon":-8.3961,"lat":43.3713}},
                 {"_id":5,"name":"Aachen","country":"DE","coord":{"lon":6.0833,"lat":50.7833}}
             ]
-        """.trimIndent()
+            """.trimIndent()
 
-        val inputStream = ByteArrayInputStream(jsonString.toByteArray())
-        val mockAssets = mockk<android.content.res.AssetManager>()
-        every { context.assets } returns mockAssets
-        every { mockAssets.open("json_sorted.json") } returns inputStream
+            val inputStream = ByteArrayInputStream(jsonString.toByteArray())
+            val mockAssets = mockk<android.content.res.AssetManager>()
+            every { context.assets } returns mockAssets
+            every { mockAssets.open("json_sorted_min.json") } returns inputStream
 
-        // When
-        val result = dataSource.getLocalCities()
+            // When
+            val result = dataSource.getLocalCities()
 
-        // Then
-        assertEquals(5, result.size)
-        assertEquals("'t Zand", result[0].name)
-        assertEquals("'t Hoeksken", result[1].name)
-        assertEquals("665 Site Colonia", result[2].name)
-        assertEquals("A Coruna", result[3].name)
-        assertEquals("Aachen", result[4].name)
-    }
+            // Then
+            assertEquals(5, result.size)
+            assertEquals("'t Zand", result[0].name)
+            assertEquals("'t Hoeksken", result[1].name)
+            assertEquals("665 Site Colonia", result[2].name)
+            assertEquals("A Coruna", result[3].name)
+            assertEquals("Aachen", result[4].name)
+        }
 }

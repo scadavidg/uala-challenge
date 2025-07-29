@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.converter.moshi)
     implementation(libs.moshi.kotlin)
+    implementation(libs.okio)
 
     // Dependency Injection (Hilt)
     implementation(libs.hilt.android)
@@ -63,6 +64,13 @@ dependencies {
 
     // Data Store
     implementation(libs.androidx.datastore.preferences)
+
+    // Room Database
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)
+    testImplementation(libs.room.testing)
+
     testImplementation(kotlin("test"))
 }
 

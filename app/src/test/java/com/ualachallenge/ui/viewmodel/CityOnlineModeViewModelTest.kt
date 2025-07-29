@@ -265,4 +265,4 @@ class CityOnlineModeViewModelTest {
         val isOnlineMode = viewModel.isOnlineMode.first()
         assertFalse(isOnlineMode) // Should keep default value
     }
-} 
+}

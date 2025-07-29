@@ -271,6 +271,26 @@ class CitySearchViewModelTest {
     }
 
     @Test
+    fun `Given searchCities is called with valid query, When use case returns empty results, Then should update state with empty results`() = runTest {
+        // Given
+        val query = "NonExistentCity"
+        val emptyResults = emptyList<City>()
+        coEvery { searchCitiesUseCase(query, false) } returns Result.Success(emptyResults)
+
+        // When
+        viewModel.searchCities(query)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        val searchState = viewModel.searchState.first { it is SearchState.Results }
+        val resultsState = searchState as SearchState.Results
+        assertTrue(resultsState.cities.isEmpty())
+
+        val searchQuery = viewModel.searchQuery.first()
+        assertEquals(query, searchQuery)
+    }
+
+    @Test
     fun `Given refreshCurrentSearch is called, When previous search exists, Then should refresh search`() = runTest {
         // Given
         val query = "test"

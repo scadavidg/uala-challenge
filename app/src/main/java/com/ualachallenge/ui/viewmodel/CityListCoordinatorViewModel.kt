@@ -18,7 +18,8 @@ class CityListCoordinatorViewModel {
         onlineModeState: OnlineModeState,
         filters: CityFilters,
         isOnlineMode: Boolean,
-        favoriteCities: List<City> = emptyList()
+        favoriteCities: List<City> = emptyList(),
+        isMigrationInProgress: Boolean = false
     ): CityListScreenUiState {
         // Extract cities from states
         val cities = when (listState) {
@@ -33,21 +34,27 @@ class CityListCoordinatorViewModel {
 
         // Determine filtered cities
         val filteredCities = when {
-            searchResults.isNotEmpty() -> {
-                if (filters.showOnlyFavorites) {
-                    // If we are in favorites mode and there are search results,
-                    // ensure all cities have isFavorite = true
-                    searchResults.map { it.copy(isFavorite = true) }
+            // If there's an active search query, only show search results
+            filters.searchQuery.isNotBlank() -> {
+                if (searchResults.isNotEmpty()) {
+                    if (filters.showOnlyFavorites) {
+                        // If we are in favorites mode and there are search results,
+                        // ensure all cities have isFavorite = true
+                        searchResults.map { it.copy(isFavorite = true) }
+                    } else {
+                        searchResults
+                    }
                 } else {
-                    searchResults
+                    // If search query is active but no results, show empty list
+                    emptyList()
                 }
             }
             filters.showOnlyFavorites -> favoriteCities.map { it.copy(isFavorite = true) }
             else -> cities
         }
 
-        // Determine loading state
-        val isLoading = listState is CityListState.Loading
+        // Determine loading state - don't show loading if migration is in progress and no cities
+        val isLoading = listState is CityListState.Loading && !(isMigrationInProgress && cities.isEmpty())
 
         // Determine error
         val error = when (listState) {

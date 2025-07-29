@@ -1,7 +1,8 @@
 package com.data.repositories
 
 import com.data.local.AppSettingsDataSource
-import com.data.local.CityLocalDataSource
+import com.data.local.CityRoomDataSource
+import com.data.local.FavoriteCityRoomDataSource
 import com.data.mapper.CityMapper
 import com.data.remote.CityRemoteDataSource
 import com.data.remote.NetworkException
@@ -10,10 +11,13 @@ import com.domain.models.Result
 import com.domain.repositories.CityRepository
 import java.io.IOException
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class CityRepositoryImpl @Inject constructor(
     private val remoteDataSource: CityRemoteDataSource,
-    private val localDataSource: CityLocalDataSource,
+    private val roomDataSource: CityRoomDataSource,
+    private val favoriteCityDataSource: FavoriteCityRoomDataSource,
     private val appSettingsDataSource: AppSettingsDataSource,
     private val mapper: CityMapper
 ) : CityRepository {
@@ -27,13 +31,34 @@ class CityRepositoryImpl @Inject constructor(
 
     override suspend fun getAllCities(page: Int, limit: Int): Result<List<City>> = try {
         updateOnlineModeStatus()
-        
+
         val cities = if (isOnlineMode) {
-            getCitiesFromRemote(page, limit)
+            // Always try online first if online mode is enabled
+            try {
+                val remoteCities = getCitiesFromRemote(page, limit)
+                if (remoteCities.isNotEmpty()) {
+                    remoteCities
+                } else {
+                    // If remote returns empty, try Room as fallback
+                    try {
+                        getCitiesFromRoom()
+                    } catch (localException: Exception) {
+                        emptyList()
+                    }
+                }
+            } catch (e: Exception) {
+                // If online fails, try Room as fallback
+                try {
+                    getCitiesFromRoom()
+                } catch (localException: Exception) {
+                    emptyList()
+                }
+            }
         } else {
-            getCitiesFromLocal()
+            // Use Room for offline mode
+            getCitiesFromRoom()
         }
-        
+
         cachedCities = cities
         Result.Success(cities)
     } catch (e: Exception) {
@@ -42,65 +67,69 @@ class CityRepositoryImpl @Inject constructor(
 
     override suspend fun searchCities(prefix: String, onlyFavorites: Boolean): Result<List<City>> = try {
         updateOnlineModeStatus()
-        
+
         val sanitizedPrefix = sanitizeSearchQuery(prefix)
-        
+
         val searchResults = if (isOnlineMode) {
             searchCitiesOnline(sanitizedPrefix, onlyFavorites)
         } else {
-            searchCitiesOffline(sanitizedPrefix, onlyFavorites)
+            searchCitiesOfflineWithRoom(sanitizedPrefix, onlyFavorites)
         }
-        
+
         Result.Success(sortCitiesAlphabetically(searchResults))
     } catch (e: Exception) {
         handleSearchError(e)
     }
 
-    override suspend fun toggleFavorite(cityId: Int): Result<Unit> = try {
-        val isFavorite = localDataSource.isFavorite(cityId)
-        
-        if (isFavorite) {
-            localDataSource.removeFavoriteCity(cityId)
-        } else {
-            localDataSource.addFavorite(cityId)
+    override suspend fun toggleFavorite(cityId: Int): Result<Unit> {
+        return try {
+            val isFavorite = favoriteCityDataSource.isFavorite(cityId)
+
+            if (isFavorite) {
+                favoriteCityDataSource.removeFavoriteCity(cityId)
+            } else {
+                // Get the city data to add to favorites
+                val city = getCityById(cityId)
+                when (city) {
+                    is Result.Success -> {
+                        city.data?.let { cityData ->
+                            favoriteCityDataSource.addFavoriteCity(cityData)
+                        }
+                    }
+
+                    is Result.Error -> {
+                        return Result.Error("Could not add to favorites: ${city.message}")
+                    }
+
+                    is Result.Loading -> {
+                        return Result.Error("City is still loading")
+                    }
+                }
+            }
+
+            updateCachedCityFavoriteStatus(cityId, !isFavorite)
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(e.message.orEmpty())
         }
-        
-        updateCachedCityFavoriteStatus(cityId, !isFavorite)
-        Result.Success(Unit)
-    } catch (e: Exception) {
-        Result.Error(e.message.orEmpty())
     }
 
     override suspend fun getFavoriteCities(): Result<List<City>> = try {
-        val citiesResult = getAllCities()
-        val cities = when (citiesResult) {
-            is Result.Success -> citiesResult.data
-            is Result.Error -> emptyList()
-            is Result.Loading -> emptyList()
-        }
-        
-        val favoriteCitiesFromList = cities.filter { it.isFavorite }
-        
-        if (favoriteCitiesFromList.isNotEmpty()) {
-            Result.Success(favoriteCitiesFromList)
-        } else {
-            // Fallback: use the new method that gets complete favorite data
-            val favoriteCities = localDataSource.getFavoriteCitiesData()
-            Result.Success(favoriteCities)
-        }
+        val favoriteCities = favoriteCityDataSource.getAllFavoriteCities()
+        Result.Success(favoriteCities)
     } catch (e: Exception) {
         Result.Error(e.message.orEmpty())
     }
 
     override suspend fun getCityById(cityId: Int): Result<City?> = try {
         updateOnlineModeStatus()
-        
+
         val city = if (isOnlineMode) {
             getCityFromRemote(cityId)
         } else {
-            getCityFromLocal(cityId)
+            getCityFromRoom(cityId)
         }
-        
+
         Result.Success(city)
     } catch (e: Exception) {
         Result.Error(e.message.orEmpty())
@@ -124,23 +153,49 @@ class CityRepositoryImpl @Inject constructor(
     // MARK: - Private Helper Methods
 
     private suspend fun updateOnlineModeStatus() {
+        val previousMode = isOnlineMode
         isOnlineMode = appSettingsDataSource.isOnlineMode()
     }
 
     private suspend fun getCitiesFromRemote(page: Int, limit: Int): List<City> {
         val response = remoteDataSource.downloadCities(page = page, limit = limit)
-        val favorites = localDataSource.getFavoriteIds()
-        return response.data.map { dto ->
-            mapper.mapToDomain(dto, dto._id in favorites)
+
+        val favorites = favoriteCityDataSource.getFavoriteCityIds()
+
+        val cities = response.data.map { dto ->
+            val isFavorite = dto._id in favorites
+            val city = mapper.mapToDomain(dto, isFavorite)
+            city
         }
+
+        return cities
     }
 
-    private suspend fun getCitiesFromLocal(): List<City> {
-        val localCities = localDataSource.getLocalCities()
-        val favorites = localDataSource.getFavoriteIds()
-        return localCities.map { dto ->
-            mapper.mapToDomain(dto, dto._id in favorites)
+    private suspend fun getCitiesFromRoom(): List<City> {
+        val roomCities = roomDataSource.getAllCities()
+
+        // Get favorite IDs to mark cities as favorites
+        val favorites = favoriteCityDataSource.getFavoriteCityIds()
+
+        val cities = roomCities.map { city ->
+            val isFavorite = city.id in favorites
+            val updatedCity = city.copy(isFavorite = isFavorite)
+            updatedCity
         }
+
+        return cities
+    }
+
+    private suspend fun getCityFromRemote(cityId: Int): City? {
+        val cityDto = remoteDataSource.getCityById(cityId)
+        val isFavorite = favoriteCityDataSource.isFavorite(cityId)
+        return mapper.mapToDomain(cityDto, isFavorite)
+    }
+
+    private suspend fun getCityFromRoom(cityId: Int): City? {
+        val cityEntity = roomDataSource.getCityById(cityId)
+        val isFavorite = favoriteCityDataSource.isFavorite(cityId)
+        return cityEntity?.copy(isFavorite = isFavorite)
     }
 
     private fun sanitizeSearchQuery(prefix: String): String {
@@ -151,28 +206,15 @@ class CityRepositoryImpl @Inject constructor(
         return sanitized
     }
 
-    private suspend fun searchCitiesOnline(prefix: String, onlyFavorites: Boolean): List<City> {
-        return if (onlyFavorites) {
-            searchFavoritesOnline(prefix)
-        } else {
-            searchAllCitiesOnline(prefix)
-        }
+    private suspend fun searchCitiesOnline(prefix: String, onlyFavorites: Boolean): List<City> = if (onlyFavorites) {
+        searchFavoritesOnline(prefix)
+    } else {
+        searchAllCitiesOnline(prefix)
     }
 
     private suspend fun searchFavoritesOnline(prefix: String): List<City> {
-        val favoriteCitiesResult = getFavoriteCities()
-        return when (favoriteCitiesResult) {
-            is Result.Success -> {
-                val favoriteCities = favoriteCitiesResult.data
-                filterCitiesByPrefix(favoriteCities, prefix)
-            }
-            is Result.Error -> {
-                throw Exception("Failed to load favorite cities for search: ${favoriteCitiesResult.message}")
-            }
-            is Result.Loading -> {
-                throw Exception("Favorite cities are still loading, please try again")
-            }
-        }
+        val favoriteCities = favoriteCityDataSource.searchFavoriteCities(prefix)
+        return favoriteCities
     }
 
     private suspend fun searchAllCitiesOnline(prefix: String): List<City> {
@@ -182,103 +224,60 @@ class CityRepositoryImpl @Inject constructor(
             page = CityRepositoryConstants.DEFAULT_PAGE,
             limit = CityRepositoryConstants.DEFAULT_SEARCH_LIMIT
         )
-        val favorites = localDataSource.getFavoriteIds()
+        val favorites = favoriteCityDataSource.getFavoriteCityIds()
         return response.data.map { dto ->
             mapper.mapToDomain(dto, dto._id in favorites)
         }
     }
 
-    private suspend fun searchCitiesOffline(prefix: String, onlyFavorites: Boolean): List<City> {
-        val citiesToSearch = if (onlyFavorites) {
-            getCitiesForOfflineFavoritesSearch()
-        } else {
-            getCitiesForOfflineAllSearch()
+    private suspend fun searchCitiesOfflineWithRoom(prefix: String, onlyFavorites: Boolean): List<City> = if (onlyFavorites) {
+        searchFavoritesOfflineWithRoom(prefix)
+    } else {
+        searchAllCitiesOfflineWithRoom(prefix)
+    }
+
+    private suspend fun searchFavoritesOfflineWithRoom(prefix: String): List<City> {
+        val favoriteCities = favoriteCityDataSource.searchFavoriteCities(prefix)
+        return favoriteCities
+    }
+
+    private suspend fun searchAllCitiesOfflineWithRoom(prefix: String): List<City> {
+        val roomCities = roomDataSource.searchCitiesByPrefix(prefix)
+
+        // Get favorite IDs to mark cities as favorites
+        val favorites = favoriteCityDataSource.getFavoriteCityIds()
+
+        val cities = roomCities.map { city ->
+            val isFavorite = city.id in favorites
+            city.copy(isFavorite = isFavorite)
         }
-        
-        return filterCitiesByPrefix(citiesToSearch, prefix)
+
+        return cities
     }
 
-    private suspend fun getCitiesForOfflineFavoritesSearch(): List<City> {
-        val favoriteCitiesResult = getFavoriteCities()
-        return when (favoriteCitiesResult) {
-            is Result.Success -> favoriteCitiesResult.data
-            is Result.Error -> {
-                throw Exception("Failed to load favorite cities for search: ${favoriteCitiesResult.message}")
-            }
-            is Result.Loading -> {
-                throw Exception("Favorite cities are still loading, please try again")
-            }
-        }
-    }
+    private fun sortCitiesAlphabetically(cities: List<City>): List<City> = cities.sortedBy { it.name }
 
-    private suspend fun getCitiesForOfflineAllSearch(): List<City> {
-        val citiesResult = getAllCities()
-        return when (citiesResult) {
-            is Result.Success -> citiesResult.data
-            is Result.Error -> {
-                throw Exception("Failed to load cities for search: ${citiesResult.message}")
-            }
-            is Result.Loading -> {
-                throw Exception("Cities are still loading, please try again")
-            }
-        }
-    }
-
-    private fun filterCitiesByPrefix(cities: List<City>, prefix: String): List<City> {
-        val normalizedPrefix = prefix.lowercase()
-        return if (normalizedPrefix.isEmpty()) {
-            cities
-        } else {
-            cities.filter { city ->
-                city.name.lowercase().startsWith(normalizedPrefix)
-            }
-        }
-    }
-
-    private suspend fun getCityFromRemote(cityId: Int): City? {
-        val cityDto = remoteDataSource.getCityById(cityId)
-        val isFavorite = localDataSource.isFavorite(cityId)
-        return mapper.mapToDomain(cityDto, isFavorite)
-    }
-
-    private suspend fun getCityFromLocal(cityId: Int): City? {
-        val localCities = localDataSource.getLocalCities()
-        val favorites = localDataSource.getFavoriteIds()
-        val cityDto = localCities.find { it._id == cityId }
-        return cityDto?.let { mapper.mapToDomain(it, it._id in favorites) }
+    private fun handleSearchError(e: Exception): Result<List<City>> = when (e) {
+        is IllegalArgumentException -> Result.Error(e.message.orEmpty())
+        is IOException -> Result.Error("Network error during search")
+        is NetworkException -> Result.Error(e.message.orEmpty())
+        else -> Result.Error("Unexpected error during search: ${e.message}")
     }
 
     private fun updateCachedCityFavoriteStatus(cityId: Int, isFavorite: Boolean) {
-        cachedCities = cachedCities?.map { city ->
-            if (city.id == cityId) city.copy(isFavorite = isFavorite) else city
+        cachedCities?.let { cities ->
+            val updatedCities = cities.map { city ->
+                if (city.id == cityId) {
+                    city.copy(isFavorite = isFavorite)
+                } else {
+                    city
+                }
+            }
+            cachedCities = updatedCities
         }
     }
 
     private fun clearCache() {
         cachedCities = null
     }
-
-    private fun handleSearchError(e: Exception): Result<List<City>> {
-        // Check if this is a CancellationException (which happens during debouncing)
-        if (e is kotlinx.coroutines.CancellationException || e.cause is kotlinx.coroutines.CancellationException) {
-            throw e // Re-throw to let the ViewModel handle it properly
-        }
-
-        val errorMessage = when (e) {
-            is NetworkException -> "Network error: ${e.message}"
-            is IOException -> "Connection error: ${e.message}"
-            is IllegalArgumentException -> e.message ?: "Invalid search query"
-            else -> "Search error: ${e.message}"
-        }
-        return Result.Error(errorMessage)
-    }
-
-    /**
-     * Sorts cities alphabetically by city name first, then by country.
-     * This follows the requirement: "Denver, US" should appear before "Sydney, Australia"
-     */
-    private fun sortCitiesAlphabetically(cities: List<City>): List<City> = cities.sortedWith(
-        compareBy<City> { it.name.lowercase() }
-            .thenBy { it.country.lowercase() }
-    )
 }
