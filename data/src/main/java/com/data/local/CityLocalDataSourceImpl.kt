@@ -113,7 +113,7 @@ class CityLocalDataSourceImpl @Inject constructor(private val dataStore: DataSto
     }
 
     override suspend fun getLocalCities(): List<CityRemoteDto> = try {
-        val jsonString = context.assets.open("json_sorted_min_min.json").bufferedReader().use { it.readText() }
+        val jsonString = context.assets.open("json_sorted_min.json").bufferedReader().use { it.readText() }
         val moshi = Moshi.Builder()
             .addLast(KotlinJsonAdapterFactory())
             .build()

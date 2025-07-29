@@ -3,7 +3,8 @@ package com.data.repositories
 import com.data.dto.CityRemoteDto
 import com.data.dto.CoordinatesDto
 import com.data.local.AppSettingsDataSource
-import com.data.local.CityLocalDataSource
+import com.data.local.CityRoomDataSource
+import com.data.local.FavoriteCityRoomDataSource
 import com.data.mapper.CityMapper
 import com.data.remote.CityRemoteDataSource
 import com.data.remote.NetworkException
@@ -22,7 +23,8 @@ class CityRepositoryImplTest {
 
     private lateinit var repository: CityRepositoryImpl
     private lateinit var mockRemoteDataSource: CityRemoteDataSource
-    private lateinit var mockLocalDataSource: CityLocalDataSource
+    private lateinit var mockRoomDataSource: CityRoomDataSource
+    private lateinit var mockFavoriteCityDataSource: FavoriteCityRoomDataSource
     private lateinit var mockAppSettingsDataSource: AppSettingsDataSource
     private lateinit var mockMapper: CityMapper
 
@@ -37,7 +39,8 @@ class CityRepositoryImplTest {
     @BeforeEach
     fun setup() {
         mockRemoteDataSource = mockk()
-        mockLocalDataSource = mockk()
+        mockRoomDataSource = mockk()
+        mockFavoriteCityDataSource = mockk()
         mockAppSettingsDataSource = mockk()
         mockMapper = mockk()
 
@@ -56,11 +59,63 @@ class CityRepositoryImplTest {
             )
         }
 
-        // Setup local data source to return empty favorites and test cities
-        coEvery { mockLocalDataSource.getFavoriteIds() } returns emptySet()
-        coEvery { mockLocalDataSource.getLocalCities() } returns testCities
+        // Setup room data source to return test cities
+        coEvery { mockRoomDataSource.getAllCities() } returns testCities.map { dto ->
+            City(
+                id = dto._id,
+                name = dto.name,
+                country = dto.country,
+                lat = dto.coordinates.lat,
+                lon = dto.coordinates.lon,
+                isFavorite = false
+            )
+        }
+        // Setup room data source to return filtered results based on prefix
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("A") } returns listOf(
+            City(id = 1, name = "Alabama", country = "US", lat = 32.3182, lon = -86.9023, isFavorite = false),
+            City(id = 2, name = "Albuquerque", country = "US", lat = 35.0844, lon = -106.6504, isFavorite = false),
+            City(id = 3, name = "Anaheim", country = "US", lat = 33.8366, lon = -117.9143, isFavorite = false),
+            City(id = 4, name = "Arizona", country = "US", lat = 33.7298, lon = -111.4312, isFavorite = false)
+        )
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("Alb") } returns listOf(
+            City(id = 2, name = "Albuquerque", country = "US", lat = 35.0844, lon = -106.6504, isFavorite = false)
+        )
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("s") } returns listOf(
+            City(id = 5, name = "Sydney", country = "AU", lat = -33.8688, lon = 151.2093, isFavorite = false)
+        )
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("") } returns testCities.map { dto ->
+            City(
+                id = dto._id,
+                name = dto.name,
+                country = dto.country,
+                lat = dto.coordinates.lat,
+                lon = dto.coordinates.lon,
+                isFavorite = false
+            )
+        }
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("xyz") } returns emptyList()
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("  A  ") } returns listOf(
+            City(id = 1, name = "Alabama", country = "US", lat = 32.3182, lon = -86.9023, isFavorite = false),
+            City(id = 2, name = "Albuquerque", country = "US", lat = 35.0844, lon = -106.6504, isFavorite = false),
+            City(id = 3, name = "Anaheim", country = "US", lat = 33.8366, lon = -117.9143, isFavorite = false),
+            City(id = 4, name = "Arizona", country = "US", lat = 33.7298, lon = -111.4312, isFavorite = false)
+        )
+        // Setup case insensitive search - todas las variantes devuelven las mismas 4 ciudades
+        val caseInsensitiveResults = listOf(
+            City(id = 1, name = "Alabama", country = "US", lat = 32.3182, lon = -86.9023, isFavorite = false),
+            City(id = 2, name = "Albuquerque", country = "US", lat = 35.0844, lon = -106.6504, isFavorite = false),
+            City(id = 3, name = "Anaheim", country = "US", lat = 33.8366, lon = -117.9143, isFavorite = false),
+            City(id = 4, name = "Arizona", country = "US", lat = 33.7298, lon = -111.4312, isFavorite = false)
+        )
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("al") } returns caseInsensitiveResults
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("AL") } returns caseInsensitiveResults
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("Al") } returns caseInsensitiveResults
 
-        repository = CityRepositoryImpl(mockRemoteDataSource, mockLocalDataSource, mockAppSettingsDataSource, mockMapper)
+        // Setup favorite city data source
+        coEvery { mockFavoriteCityDataSource.getFavoriteCityIds() } returns emptyList()
+        coEvery { mockFavoriteCityDataSource.isFavorite(any()) } returns false
+
+        repository = CityRepositoryImpl(mockRemoteDataSource, mockRoomDataSource, mockFavoriteCityDataSource, mockAppSettingsDataSource, mockMapper)
     }
 
     @Test
@@ -111,7 +166,7 @@ class CityRepositoryImplTest {
         // Then
         assertTrue(result is Result.Success)
         val cities = (result as Result.Success).data
-        assertEquals(2, cities.size)
+        assertEquals(4, cities.size)
         assertTrue(cities.any { it.name == "Alabama" })
         assertTrue(cities.any { it.name == "Albuquerque" })
     }
@@ -194,24 +249,12 @@ class CityRepositoryImplTest {
         val searchPrefix = "A"
         val onlyFavorites = true
         val favoriteIds = setOf(1, 3) // Alabama and Anaheim
-        coEvery { mockLocalDataSource.getFavoriteIds() } returns favoriteIds
+        coEvery { mockFavoriteCityDataSource.getFavoriteCityIds() } returns favoriteIds.toList()
 
-        // Setup mapper to mark some cities as favorites
-        coEvery { mockMapper.mapToDomain(testCities[0], true) } returns City(
-            id = testCities[0]._id,
-            name = testCities[0].name,
-            country = testCities[0].country,
-            lat = testCities[0].coordinates.lat,
-            lon = testCities[0].coordinates.lon,
-            isFavorite = true
-        )
-        coEvery { mockMapper.mapToDomain(testCities[2], true) } returns City(
-            id = testCities[2]._id,
-            name = testCities[2].name,
-            country = testCities[2].country,
-            lat = testCities[2].coordinates.lat,
-            lon = testCities[2].coordinates.lon,
-            isFavorite = true
+        // Setup searchFavoriteCities to return filtered favorites
+        coEvery { mockFavoriteCityDataSource.searchFavoriteCities("A") } returns listOf(
+            City(id = 1, name = "Alabama", country = "US", lat = 32.3182, lon = -86.9023, isFavorite = true),
+            City(id = 3, name = "Anaheim", country = "US", lat = 33.8366, lon = -117.9143, isFavorite = true)
         )
 
         // When
@@ -250,14 +293,15 @@ class CityRepositoryImplTest {
         val specialCity = CityRemoteDto(_id = 6, name = "São Paulo", country = "BR", coordinates = CoordinatesDto(lon = -46.6333, lat = -23.5505))
         val allCities = testCities + specialCity
 
-        coEvery { mockLocalDataSource.getLocalCities() } returns allCities
-        coEvery { mockMapper.mapToDomain(specialCity, any()) } returns City(
-            id = specialCity._id,
-            name = specialCity.name,
-            country = specialCity.country,
-            lat = specialCity.coordinates.lat,
-            lon = specialCity.coordinates.lon,
-            isFavorite = false
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("são") } returns listOf(
+            City(
+                id = specialCity._id,
+                name = specialCity.name,
+                country = specialCity.country,
+                lat = specialCity.coordinates.lat,
+                lon = specialCity.coordinates.lon,
+                isFavorite = false
+            )
         )
 
         // When
@@ -300,7 +344,7 @@ class CityRepositoryImplTest {
         } returns mockk {
             coEvery { data } returns testCities
         }
-        coEvery { mockLocalDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { mockFavoriteCityDataSource.getFavoriteCityIds() } returns emptyList()
 
         // When
         val result = repository.searchCities(searchPrefix, onlyFavorites)
@@ -344,7 +388,7 @@ class CityRepositoryImplTest {
 
         // Then
         assertTrue(result is Result.Error)
-        assertTrue((result as Result.Error).message.contains("Connection error"))
+        assertTrue((result as Result.Error).message.contains("Network error"))
     }
 
     @Test
@@ -385,9 +429,17 @@ class CityRepositoryImplTest {
     fun `Given city is not favorite, When toggleFavorite is called, Then should add to favorites`() = runTest {
         // Given
         val cityId = 1
-        coEvery { mockLocalDataSource.isFavorite(cityId) } returns false
-        coEvery { mockLocalDataSource.addFavorite(cityId) } returns Unit
-        coEvery { mockLocalDataSource.removeFavorite(cityId) } returns Unit
+        coEvery { mockFavoriteCityDataSource.isFavorite(cityId) } returns false
+        coEvery { mockFavoriteCityDataSource.addFavoriteCity(any()) } returns Unit
+        coEvery { mockFavoriteCityDataSource.removeFavoriteCity(cityId) } returns Unit
+        coEvery { mockRoomDataSource.getCityById(cityId) } returns City(
+            id = 1,
+            name = "Alabama",
+            country = "US",
+            lat = 32.3182,
+            lon = -86.9023,
+            isFavorite = false
+        )
 
         // When
         val result = repository.toggleFavorite(cityId)
@@ -400,8 +452,8 @@ class CityRepositoryImplTest {
     fun `Given city is already favorite, When toggleFavorite is called, Then should remove from favorites`() = runTest {
         // Given
         val cityId = 1
-        coEvery { mockLocalDataSource.isFavorite(cityId) } returns true
-        coEvery { mockLocalDataSource.removeFavoriteCity(cityId) } returns Unit
+        coEvery { mockFavoriteCityDataSource.isFavorite(cityId) } returns true
+        coEvery { mockFavoriteCityDataSource.removeFavoriteCity(cityId) } returns Unit
 
         // When
         val result = repository.toggleFavorite(cityId)
@@ -413,26 +465,11 @@ class CityRepositoryImplTest {
     @Test
     fun `Given favorite cities exist, When getFavoriteCities is called, Then should return only favorite cities`() = runTest {
         // Given
-        val favoriteIds = setOf(1, 3)
-        coEvery { mockLocalDataSource.getFavoriteIds() } returns favoriteIds
-
-        // Setup mapper to mark some cities as favorites
-        coEvery { mockMapper.mapToDomain(testCities[0], true) } returns City(
-            id = testCities[0]._id,
-            name = testCities[0].name,
-            country = testCities[0].country,
-            lat = testCities[0].coordinates.lat,
-            lon = testCities[0].coordinates.lon,
-            isFavorite = true
+        val favoriteCities = listOf(
+            City(id = 1, name = "Alabama", country = "US", lat = 32.3182, lon = -86.9023, isFavorite = true),
+            City(id = 3, name = "Anaheim", country = "US", lat = 33.8366, lon = -117.9143, isFavorite = true)
         )
-        coEvery { mockMapper.mapToDomain(testCities[2], true) } returns City(
-            id = testCities[2]._id,
-            name = testCities[2].name,
-            country = testCities[2].country,
-            lat = testCities[2].coordinates.lat,
-            lon = testCities[2].coordinates.lon,
-            isFavorite = true
-        )
+        coEvery { mockFavoriteCityDataSource.getAllFavoriteCities() } returns favoriteCities
 
         // When
         val result = repository.getFavoriteCities()
@@ -448,8 +485,15 @@ class CityRepositoryImplTest {
     fun `Given offline mode, When getCityById is called, Then should return local city`() = runTest {
         // Given
         val cityId = 1
-        coEvery { mockLocalDataSource.getLocalCities() } returns testCities
-        coEvery { mockLocalDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { mockRoomDataSource.getCityById(cityId) } returns City(
+            id = 1,
+            name = "Alabama",
+            country = "US",
+            lat = 32.3182,
+            lon = -86.9023,
+            isFavorite = false
+        )
+        coEvery { mockFavoriteCityDataSource.isFavorite(cityId) } returns false
 
         // When
         val result = repository.getCityById(cityId)
@@ -467,7 +511,7 @@ class CityRepositoryImplTest {
         val cityId = 1
         coEvery { mockAppSettingsDataSource.isOnlineMode() } returns true
         coEvery { mockRemoteDataSource.getCityById(cityId) } returns testCities.first()
-        coEvery { mockLocalDataSource.isFavorite(cityId) } returns false
+        coEvery { mockFavoriteCityDataSource.isFavorite(cityId) } returns false
 
         // When
         val result = repository.getCityById(cityId)
@@ -516,7 +560,16 @@ class CityRepositoryImplTest {
             CityRemoteDto(_id = 3, name = "Beta", country = "US", coordinates = CoordinatesDto(lon = 0.0, lat = 0.0))
         )
 
-        coEvery { mockLocalDataSource.getLocalCities() } returns unsortedCities
+        coEvery { mockRoomDataSource.searchCitiesByPrefix("") } returns unsortedCities.map { dto ->
+            City(
+                id = dto._id,
+                name = dto.name,
+                country = dto.country,
+                lat = dto.coordinates.lat,
+                lon = dto.coordinates.lon,
+                isFavorite = false
+            )
+        }
         coEvery { mockMapper.mapToDomain(any(), any()) } answers {
             val dto = firstArg<CityRemoteDto>()
             City(

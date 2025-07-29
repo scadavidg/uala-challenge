@@ -5,7 +5,8 @@ import com.data.dto.CitiesResponseDto
 import com.data.dto.CityRemoteDto
 import com.data.dto.CoordinatesDto
 import com.data.local.AppSettingsDataSource
-import com.data.local.CityLocalDataSource
+import com.data.local.CityRoomDataSource
+import com.data.local.FavoriteCityRoomDataSource
 import com.data.mapper.CityMapper
 import com.data.remote.CityRemoteDataSource
 import com.domain.models.Result
@@ -28,7 +29,8 @@ class CityRepositoryImplPerformanceTest {
 
     private lateinit var repository: CityRepositoryImpl
     private lateinit var remoteDataSource: CityRemoteDataSource
-    private lateinit var localDataSource: CityLocalDataSource
+    private lateinit var roomDataSource: CityRoomDataSource
+    private lateinit var favoriteCityDataSource: FavoriteCityRoomDataSource
     private lateinit var appSettingsDataSource: AppSettingsDataSource
     private lateinit var cityMapper: CityMapper
 
@@ -38,12 +40,14 @@ class CityRepositoryImplPerformanceTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         remoteDataSource = mockk()
-        localDataSource = mockk()
+        roomDataSource = mockk()
+        favoriteCityDataSource = mockk()
         appSettingsDataSource = mockk()
         cityMapper = CityMapper()
         repository = CityRepositoryImpl(
             remoteDataSource = remoteDataSource,
-            localDataSource = localDataSource,
+            roomDataSource = roomDataSource,
+            favoriteCityDataSource = favoriteCityDataSource,
             appSettingsDataSource = appSettingsDataSource,
             mapper = cityMapper
         )
@@ -72,7 +76,7 @@ class CityRepositoryImplPerformanceTest {
             success = true,
             data = largeCityList
         )
-        coEvery { localDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { favoriteCityDataSource.getFavoriteCityIds() } returns emptyList()
 
         // When
         val startTime = System.currentTimeMillis()
@@ -103,7 +107,7 @@ class CityRepositoryImplPerformanceTest {
             success = true,
             data = mediumCityList
         )
-        coEvery { localDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { favoriteCityDataSource.getFavoriteCityIds() } returns emptyList()
 
         // When
         val startTime = System.currentTimeMillis()
@@ -134,7 +138,7 @@ class CityRepositoryImplPerformanceTest {
             success = true,
             data = largeCityList
         )
-        coEvery { localDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { favoriteCityDataSource.getFavoriteCityIds() } returns emptyList()
         val runtime = Runtime.getRuntime()
         val initialMemory = runtime.totalMemory() - runtime.freeMemory()
 
@@ -162,7 +166,7 @@ class CityRepositoryImplPerformanceTest {
             success = true,
             data = largeCityList
         )
-        coEvery { localDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { favoriteCityDataSource.getFavoriteCityIds() } returns emptyList()
 
         // When
         val startTime = System.currentTimeMillis()
@@ -184,8 +188,17 @@ class CityRepositoryImplPerformanceTest {
         val searchPrefix = "City"
         val onlyFavorites = false
         coEvery { appSettingsDataSource.isOnlineMode() } returns false
-        coEvery { localDataSource.getLocalCities() } returns largeCityList
-        coEvery { localDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { roomDataSource.getAllCities() } returns largeCityList.map { dto ->
+            com.domain.models.City(
+                id = dto._id,
+                name = dto.name,
+                country = dto.country,
+                lat = dto.coordinates.lat,
+                lon = dto.coordinates.lon,
+                isFavorite = false
+            )
+        }
+        coEvery { favoriteCityDataSource.getFavoriteCityIds() } returns emptyList()
 
         // When
         val startTime = System.currentTimeMillis()
@@ -233,7 +246,7 @@ class CityRepositoryImplPerformanceTest {
         } returns mockk {
             coEvery { data } returns searchResults
         }
-        coEvery { localDataSource.getFavoriteIds() } returns emptySet()
+        coEvery { favoriteCityDataSource.getFavoriteCityIds() } returns emptyList()
 
         // When
         val startTime = System.currentTimeMillis()
