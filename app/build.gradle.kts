@@ -1,3 +1,16 @@
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+} else {
+    throw GradleException("local.properties file not found at project root.")
+}
+
+val apiKeyGoogleMaps = localProperties.getProperty("API_KEY_GOOGLE_MAPS")
+    ?: throw GradleException("API_KEY is missing in local.properties")
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -19,6 +32,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "API_KEY_GOOGLE_MAPS", "\"$apiKeyGoogleMaps\"")
+        manifestPlaceholders["apiKeyGoogleMaps"] = apiKeyGoogleMaps
     }
 
     buildTypes {
@@ -37,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

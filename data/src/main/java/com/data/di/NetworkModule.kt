@@ -1,5 +1,6 @@
 package com.data.di
 
+import com.data.BuildConfig
 import com.data.remote.api.CityApiService
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -16,7 +17,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://web-production-aab06.up.railway.app/"
+    private const val BASE_URL = BuildConfig.BASE_URL
 
     @Provides
     @Singleton
