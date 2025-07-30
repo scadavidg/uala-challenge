@@ -71,18 +71,38 @@ fun SkeletonCityItemComposable() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun LoadingScreenComposablePreview() {
+fun LoadingScreenComposableLightModePreview() {
     MaterialTheme {
         LoadingScreenComposable()
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Dark Mode")
 @Composable
-fun SkeletonCityItemComposablePreview() {
+fun LoadingScreenComposableDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
+        LoadingScreenComposable()
+    }
+}
+
+@Preview(showBackground = true, name = "Skeleton Light Mode")
+@Composable
+fun SkeletonCityItemComposableLightModePreview() {
     MaterialTheme {
+        SkeletonCityItemComposable()
+    }
+}
+
+@Preview(showBackground = true, name = "Skeleton Dark Mode")
+@Composable
+fun SkeletonCityItemComposableDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
         SkeletonCityItemComposable()
     }
 }

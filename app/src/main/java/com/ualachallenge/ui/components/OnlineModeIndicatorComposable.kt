@@ -58,18 +58,38 @@ fun OnlineModeIndicatorComposable(isOnlineMode: Boolean, modifier: Modifier = Mo
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Online - Light Mode")
 @Composable
-fun OnlineModeIndicatorOnlinePreview() {
+fun OnlineModeIndicatorOnlineLightModePreview() {
     MaterialTheme {
         OnlineModeIndicatorComposable(isOnlineMode = true)
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Offline - Light Mode")
 @Composable
-fun OnlineModeIndicatorOfflinePreview() {
+fun OnlineModeIndicatorOfflineLightModePreview() {
     MaterialTheme {
+        OnlineModeIndicatorComposable(isOnlineMode = false)
+    }
+}
+
+@Preview(showBackground = true, name = "Online - Dark Mode")
+@Composable
+fun OnlineModeIndicatorOnlineDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
+        OnlineModeIndicatorComposable(isOnlineMode = true)
+    }
+}
+
+@Preview(showBackground = true, name = "Offline - Dark Mode")
+@Composable
+fun OnlineModeIndicatorOfflineDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
         OnlineModeIndicatorComposable(isOnlineMode = false)
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,22 +80,54 @@ fun SearchBarComposable(
     )
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode - Empty")
 @Composable
-fun SearchBarComposablePreview() {
-    SearchBarComposable(
-        query = "",
-        onQueryChange = {},
-        onTrailingIconClick = {}
-    )
+fun SearchBarComposableLightModeEmptyPreview() {
+    MaterialTheme {
+        SearchBarComposable(
+            query = "",
+            onQueryChange = {},
+            onTrailingIconClick = {}
+        )
+    }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode - With Text")
 @Composable
-fun SearchBarComposableWithTextPreview() {
-    SearchBarComposable(
-        query = "New York",
-        onQueryChange = {},
-        onTrailingIconClick = {}
-    )
+fun SearchBarComposableLightModeWithTextPreview() {
+    MaterialTheme {
+        SearchBarComposable(
+            query = "New York",
+            onQueryChange = {},
+            onTrailingIconClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode - Empty")
+@Composable
+fun SearchBarComposableDarkModeEmptyPreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
+        SearchBarComposable(
+            query = "",
+            onQueryChange = {},
+            onTrailingIconClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode - With Text")
+@Composable
+fun SearchBarComposableDarkModeWithTextPreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
+        SearchBarComposable(
+            query = "New York",
+            onQueryChange = {},
+            onTrailingIconClick = {}
+        )
+    }
 }

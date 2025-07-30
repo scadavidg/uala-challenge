@@ -79,9 +79,9 @@ fun CacheMigrationIndicator(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Visible - Light Mode")
 @Composable
-fun CacheMigrationIndicatorPreview() {
+fun CacheMigrationIndicatorVisibleLightModePreview() {
     MaterialTheme {
         CacheMigrationIndicator(
             progress = 75f,
@@ -90,10 +90,36 @@ fun CacheMigrationIndicatorPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Hidden - Light Mode")
 @Composable
-fun CacheMigrationIndicatorHiddenPreview() {
+fun CacheMigrationIndicatorHiddenLightModePreview() {
     MaterialTheme {
+        CacheMigrationIndicator(
+            progress = 50f,
+            isVisible = false
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Visible - Dark Mode")
+@Composable
+fun CacheMigrationIndicatorVisibleDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
+        CacheMigrationIndicator(
+            progress = 75f,
+            isVisible = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Hidden - Dark Mode")
+@Composable
+fun CacheMigrationIndicatorHiddenDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
         CacheMigrationIndicator(
             progress = 50f,
             isVisible = false

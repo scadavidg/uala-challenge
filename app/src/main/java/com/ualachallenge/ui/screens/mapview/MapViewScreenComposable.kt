@@ -1,5 +1,6 @@
 package com.ualachallenge.ui.screens.mapview
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,10 +25,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,8 +50,17 @@ import com.ualachallenge.ui.viewmodel.MapViewViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapViewScreenComposable(onNavigateBack: () -> Unit, viewModel: MapViewViewModel = hiltViewModel()) {
+fun MapViewScreenComposable(onNavigateBack: (Int) -> Unit, cityId: Int, viewModel: MapViewViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    val configuration = LocalConfiguration.current
+
+    // Detect orientation change and navigate back when rotating to landscape
+    LaunchedEffect(configuration.orientation) {
+        if (configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) {
+            viewModel.navigateBack()
+            onNavigateBack(cityId)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -58,7 +70,7 @@ fun MapViewScreenComposable(onNavigateBack: () -> Unit, viewModel: MapViewViewMo
                     IconButton(
                         onClick = {
                             viewModel.navigateBack()
-                            onNavigateBack()
+                            onNavigateBack(cityId)
                         },
                         enabled = !uiState.isNavigatingBack
                     ) {
@@ -293,12 +305,24 @@ private fun FloatingCityCard(city: City, onToggleFavorite: () -> Unit = {}, isTo
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun MapViewScreenComposablePreview() {
+fun MapViewScreenComposableLightModePreview() {
     MaterialTheme {
         MapViewScreenComposable(
-            onNavigateBack = {}
+            onNavigateBack = { _ -> },
+            cityId = 1
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun MapViewScreenComposableDarkModePreview() {
+    MaterialTheme {
+        MapViewScreenComposable(
+            onNavigateBack = { _ -> },
+            cityId = 1
         )
     }
 }
