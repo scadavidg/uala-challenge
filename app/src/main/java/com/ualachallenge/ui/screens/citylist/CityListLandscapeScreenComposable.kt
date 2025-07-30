@@ -5,13 +5,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Wifi
@@ -38,12 +38,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.domain.models.City
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 import com.ualachallenge.ui.components.CacheMigrationIndicator
 import com.ualachallenge.ui.components.CacheMigrationMessageComposable
 import com.ualachallenge.ui.components.CityListComposable
 import com.ualachallenge.ui.components.EmptyStateScreenComposable
 import com.ualachallenge.ui.components.ErrorScreenComposable
 import com.ualachallenge.ui.components.LoadingScreenComposable
+import com.ualachallenge.ui.components.MapPlaceholderComposable
 import com.ualachallenge.ui.components.ModeTransitionOverlay
 import com.ualachallenge.ui.components.OnlineModeIndicatorComposable
 import com.ualachallenge.ui.components.SearchBarComposable
@@ -56,7 +65,7 @@ import com.ualachallenge.ui.viewmodel.CitySearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Unit = {}, selectedCityId: Int? = null) {
+fun CityListLandscapeScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Unit = {}, selectedCityId: Int? = null) {
     val dataViewModel: CityListDataViewModel = hiltViewModel()
     val searchViewModel: CitySearchViewModel = hiltViewModel()
     val favoritesViewModel: CityFavoritesViewModel = hiltViewModel()
@@ -89,7 +98,7 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
     val filtersState = remember { mutableStateOf(com.ualachallenge.ui.viewmodel.states.CityFilters()) }
     val filters = filtersState.value
 
-    // Selected city for visual feedback in portrait mode
+    // Selected city for map display
     val selectedCityState = remember { mutableStateOf<City?>(null) }
 
     // LazyListState for scrolling to selected city
@@ -107,12 +116,21 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
         isMigrationInProgress = isMigrationInProgress
     )
 
-    // Set selected city based on selectedCityId
+    // Set the selected city based on selectedCityId or first city as default
     LaunchedEffect(uiState.filteredCities, selectedCityId) {
-        if (selectedCityId != null && uiState.filteredCities.isNotEmpty()) {
-            val city = uiState.filteredCities.find { it.id == selectedCityId }
-            if (city != null) {
-                selectedCityState.value = city
+        if (uiState.filteredCities.isNotEmpty()) {
+            if (selectedCityId != null) {
+                // Try to find the city with the selected ID
+                val city = uiState.filteredCities.find { it.id == selectedCityId }
+                if (city != null) {
+                    selectedCityState.value = city
+                } else {
+                    // If city not found, select the first city
+                    selectedCityState.value = uiState.filteredCities.first()
+                }
+            } else if (selectedCityState.value == null) {
+                // No selectedCityId provided, select the first city
+                selectedCityState.value = uiState.filteredCities.first()
             }
         }
     }
@@ -181,41 +199,16 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                             OnlineModeIndicatorComposable(isOnlineMode = uiState.isOnlineMode)
                         }
                     },
-                    navigationIcon = {
-                        if (uiState.showOnlyFavorites) {
-                            IconButton(
-                                onClick = {
-                                    filtersState.value = filters.copy(showOnlyFavorites = false, searchQuery = "")
-                                    // Clear the search
-                                    searchViewModel.clearSearch()
-                                    // Don't reload cities unnecessarily - just clear filters
-                                },
-                                enabled = !uiState.isTogglingFavorites
-                            ) {
-                                if (uiState.isTogglingFavorites) {
-                                    androidx.compose.material3.CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp), // Smaller size
-                                        strokeWidth = 1.5.dp // Thinner stroke
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowBack,
-                                        contentDescription = "Back to all cities"
-                                    )
-                                }
-                            }
-                        }
-                    },
                     actions = {
                         // Online/Offline mode toggle - always enabled
                         IconButton(
                             onClick = { onlineModeViewModel.toggleOnlineMode() },
-                            enabled = true // Always enabled, regardless of migration status
+                            enabled = true
                         ) {
                             if (uiState.isTogglingOnlineMode) {
                                 androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp), // Smaller size
-                                    strokeWidth = 1.5.dp // Thinner stroke
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 1.5.dp
                                 )
                             } else {
                                 Icon(
@@ -240,12 +233,12 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                                     dataViewModel.loadAllCitiesForFavorites()
                                 }
                             },
-                            enabled = true // Always enabled, regardless of migration status
+                            enabled = true
                         ) {
                             if (uiState.isTogglingFavorites) {
                                 androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp), // Smaller size
-                                    strokeWidth = 1.5.dp // Thinner stroke
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 1.5.dp
                                 )
                             } else {
                                 Icon(
@@ -271,112 +264,187 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
         }
     ) { paddingValues ->
         Box(
-            modifier =
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .pullRefresh(pullRefreshState)
         ) {
-            Column(
+            Row(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Search Bar
-                SearchBarComposable(
-                    query = uiState.searchQuery,
-                    onQueryChange = { query ->
-                        filtersState.value = filters.copy(searchQuery = query)
-                        searchViewModel.searchCities(query, uiState.showOnlyFavorites)
-                    },
-                    onTrailingIconClick = {
-                        filtersState.value = filters.copy(searchQuery = "")
-                        searchViewModel.searchCities("", uiState.showOnlyFavorites)
-                    },
-                    isSearching = uiState.isSearching
-                )
+                // Left side - City List (40% width as per wireframe)
+                Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(0.4f)
+                        .padding(end = 8.dp)
+                ) {
+                    // Search Bar
+                    SearchBarComposable(
+                        query = uiState.searchQuery,
+                        onQueryChange = { query ->
+                            filtersState.value = filters.copy(searchQuery = query)
+                            searchViewModel.searchCities(query, uiState.showOnlyFavorites)
+                        },
+                        onTrailingIconClick = {
+                            filtersState.value = filters.copy(searchQuery = "")
+                            searchViewModel.searchCities("", uiState.showOnlyFavorites)
+                        },
+                        isSearching = uiState.isSearching
+                    )
 
-                // Content
-                when {
-                    // Show loading screen only if no cities and not in migration
-                    uiState.isLoading && uiState.cities.isEmpty() && !isMigrationInProgress -> {
-                        LoadingScreenComposable()
-                    }
+                    // City List Content
+                    when {
+                        // Show loading screen only if no cities and not in migration
+                        uiState.isLoading && uiState.cities.isEmpty() && !isMigrationInProgress -> {
+                            LoadingScreenComposable()
+                        }
 
-                    uiState.error != null && uiState.cities.isEmpty() && uiState.filteredCities.isEmpty() -> {
-                        ErrorScreenComposable(
-                            error = uiState.error!!,
-                            onRetry = { dataViewModel.loadCities() }
-                        )
-                    }
-
-                    // Show cache migration message when in migration and offline mode with no cities
-                    isMigrationInProgress && !uiState.isOnlineMode && uiState.cities.isEmpty() && uiState.filteredCities.isEmpty() -> {
-                        CacheMigrationMessageComposable()
-                    }
-
-                    // Show online mode error when online mode is active but no data
-                    uiState.isOnlineMode && uiState.cities.isEmpty() && uiState.filteredCities.isEmpty() && !isMigrationInProgress -> {
-                        EmptyStateScreenComposable(isOnlineMode = true)
-                    }
-
-                    // Show search results or no results message
-                    uiState.searchQuery.isNotBlank() -> {
-                        if (uiState.filteredCities.isNotEmpty()) {
-                            CityListComposable(
-                                cities = uiState.filteredCities,
-                                onCityClick = { cityId ->
-                                    // Update selected city for visual feedback
-                                    val city = uiState.filteredCities.find { it.id == cityId }
-                                    selectedCityState.value = city
-                                    onCityClick(cityId)
-                                },
-                                onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
-                                onMapClick = onMapClick,
-                                isLoadingMore = uiState.isLoadingMore,
-                                hasMoreData = uiState.hasMoreData,
-                                onLoadMore = { dataViewModel.loadMoreCities() },
-                                selectedCityId = selectedCityState.value?.id,
-                                listState = lazyListState
+                        uiState.error != null && uiState.cities.isEmpty() && uiState.filteredCities.isEmpty() -> {
+                            ErrorScreenComposable(
+                                error = uiState.error!!,
+                                onRetry = { dataViewModel.loadCities() }
                             )
-                        } else {
-                            // Show no search results message
-                            if (uiState.showOnlyFavorites) {
-                                EmptyStateScreenComposable(isFavorites = true)
-                            } else {
-                                EmptyStateScreenComposable(
-                                    isOnlineMode = uiState.isOnlineMode,
-                                    isSearchResults = true
+                        }
+
+                        // Show cache migration message when in migration and offline mode with no cities
+                        isMigrationInProgress && !uiState.isOnlineMode && uiState.cities.isEmpty() && uiState.filteredCities.isEmpty() -> {
+                            CacheMigrationMessageComposable()
+                        }
+
+                        // Show online mode error when online mode is active but no data
+                        uiState.isOnlineMode && uiState.cities.isEmpty() && uiState.filteredCities.isEmpty() && !isMigrationInProgress -> {
+                            EmptyStateScreenComposable(isOnlineMode = true)
+                        }
+
+                        // Show search results or no results message
+                        uiState.searchQuery.isNotBlank() -> {
+                            if (uiState.filteredCities.isNotEmpty()) {
+                                CityListComposable(
+                                    cities = uiState.filteredCities,
+                                    onCityClick = { cityId ->
+                                        // Update selected city for map display
+                                        val city = uiState.filteredCities.find { it.id == cityId }
+                                        if (city != null) {
+                                            selectedCityState.value = city
+                                        }
+                                        onCityClick(cityId)
+                                    },
+                                    onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
+                                    onMapClick = { cityId ->
+                                        // Update selected city for map display
+                                        val city = uiState.filteredCities.find { it.id == cityId }
+                                        selectedCityState.value = city
+                                        onMapClick(cityId)
+                                    },
+                                    isLoadingMore = uiState.isLoadingMore,
+                                    hasMoreData = uiState.hasMoreData,
+                                    onLoadMore = { dataViewModel.loadMoreCities() },
+                                    selectedCityId = selectedCityState.value?.id,
+                                    listState = lazyListState
                                 )
+                            } else {
+                                // Show no search results message
+                                if (uiState.showOnlyFavorites) {
+                                    EmptyStateScreenComposable(isFavorites = true)
+                                } else {
+                                    EmptyStateScreenComposable(
+                                        isOnlineMode = uiState.isOnlineMode,
+                                        isSearchResults = true
+                                    )
+                                }
+                            }
+                        }
+
+                        // Show main list or empty state
+                        else -> {
+                            if (uiState.filteredCities.isNotEmpty()) {
+                                CityListComposable(
+                                    cities = uiState.filteredCities,
+                                    onCityClick = { cityId ->
+                                        // Update selected city for map display
+                                        val city = uiState.filteredCities.find { it.id == cityId }
+                                        if (city != null) {
+                                            selectedCityState.value = city
+                                        }
+                                        onCityClick(cityId)
+                                    },
+                                    onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
+                                    onMapClick = { cityId ->
+                                        // Update selected city for map display
+                                        val city = uiState.filteredCities.find { it.id == cityId }
+                                        selectedCityState.value = city
+                                        onMapClick(cityId)
+                                    },
+                                    isLoadingMore = uiState.isLoadingMore,
+                                    hasMoreData = uiState.hasMoreData,
+                                    onLoadMore = { dataViewModel.loadMoreCities() },
+                                    selectedCityId = selectedCityState.value?.id,
+                                    listState = lazyListState
+                                )
+                            } else {
+                                // Check if we're in favorites mode and show appropriate message
+                                if (uiState.showOnlyFavorites) {
+                                    EmptyStateScreenComposable(isFavorites = true)
+                                } else {
+                                    EmptyStateScreenComposable(isOnlineMode = uiState.isOnlineMode)
+                                }
                             }
                         }
                     }
+                }
 
-                    // Show main list or empty state
-                    else -> {
-                        if (uiState.filteredCities.isNotEmpty()) {
-                            CityListComposable(
-                                cities = uiState.filteredCities,
-                                onCityClick = { cityId ->
-                                    // Update selected city for visual feedback
-                                    val city = uiState.filteredCities.find { it.id == cityId }
-                                    selectedCityState.value = city
-                                    onCityClick(cityId)
-                                },
-                                onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
-                                onMapClick = onMapClick,
-                                isLoadingMore = uiState.isLoadingMore,
-                                hasMoreData = uiState.hasMoreData,
-                                onLoadMore = { dataViewModel.loadMoreCities() },
-                                selectedCityId = selectedCityState.value?.id,
-                                listState = lazyListState
+                // Right side - Map View (60% width as per wireframe)
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(0.6f)
+                        .padding(start = 8.dp)
+                ) {
+                    selectedCityState.value?.let { city ->
+                        // Map with selected city - force recreation with key
+                        val cameraPositionState = rememberCameraPositionState(
+                            key = city.id.toString()
+                        ) {
+                            position = CameraPosition.fromLatLngZoom(
+                                LatLng(city.lat, city.lon),
+                                12f
                             )
-                        } else {
-                            // Check if we're in favorites mode and show appropriate message
-                            if (uiState.showOnlyFavorites) {
-                                EmptyStateScreenComposable(isFavorites = true)
-                            } else {
-                                EmptyStateScreenComposable(isOnlineMode = uiState.isOnlineMode)
-                            }
                         }
+
+                        // Force camera animation when city changes
+                        LaunchedEffect(city.id) {
+                            // Force camera to move to the new city position
+                            cameraPositionState.animate(
+                                update = com.google.android.gms.maps.CameraUpdateFactory.newCameraPosition(
+                                    CameraPosition.fromLatLngZoom(
+                                        LatLng(city.lat, city.lon),
+                                        12f
+                                    )
+                                ),
+                                durationMs = 1000
+                            )
+                        }
+
+                        GoogleMap(
+                            modifier = Modifier.fillMaxSize(),
+                            cameraPositionState = cameraPositionState,
+                            properties = MapProperties(isMyLocationEnabled = false),
+                            uiSettings = MapUiSettings(
+                                zoomControlsEnabled = false,
+                                myLocationButtonEnabled = false,
+                                mapToolbarEnabled = false
+                            )
+                        ) {
+                            Marker(
+                                state = MarkerState(position = LatLng(city.lat, city.lon)),
+                                title = city.name,
+                                snippet = "${city.name}, ${city.country}"
+                            )
+                        }
+                    } ?: run {
+                        // Show placeholder when no city is selected
+                        MapPlaceholderComposable()
                     }
                 }
             }
@@ -400,9 +468,9 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
 
 @Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun CityListScreenComposableLightModePreview() {
+fun CityListLandscapeScreenComposableLightModePreview() {
     MaterialTheme {
-        CityListScreenComposable(
+        CityListLandscapeScreenComposable(
             onCityClick = {},
             onMapClick = {}
         )
@@ -411,9 +479,9 @@ fun CityListScreenComposableLightModePreview() {
 
 @Preview(showBackground = true, name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun CityListScreenComposableDarkModePreview() {
+fun CityListLandscapeScreenComposableDarkModePreview() {
     MaterialTheme {
-        CityListScreenComposable(
+        CityListLandscapeScreenComposable(
             onCityClick = {},
             onMapClick = {}
         )

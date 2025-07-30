@@ -79,10 +79,20 @@ fun CacheMigrationMessageComposable(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun CacheMigrationMessageComposablePreview() {
+fun CacheMigrationMessageComposableLightModePreview() {
     MaterialTheme {
+        CacheMigrationMessageComposable()
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode")
+@Composable
+fun CacheMigrationMessageComposableDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
         CacheMigrationMessageComposable()
     }
 }

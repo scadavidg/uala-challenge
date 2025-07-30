@@ -1,5 +1,6 @@
 package com.ualachallenge.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,12 +31,20 @@ fun CityItemComposable(
     city: City,
     onClick: () -> Unit,
     onFavoriteToggle: () -> Unit,
-    onMapClick: () -> Unit = {}
+    onMapClick: () -> Unit = {},
+    isSelected: Boolean = false
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable { onClick() },
+        colors = androidx.compose.material3.CardDefaults.cardColors(
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            }
+        )
     ) {
         Row(
             modifier = Modifier
@@ -97,9 +106,9 @@ fun CityItemComposable(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode - Favorite")
 @Composable
-fun CityItemComposablePreview() {
+fun CityItemComposableLightModeFavoritePreview() {
     MaterialTheme {
         CityItemComposable(
             city = City(
@@ -117,9 +126,9 @@ fun CityItemComposablePreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode - Not Favorite")
 @Composable
-fun CityItemComposableNotFavoritePreview() {
+fun CityItemComposableLightModeNotFavoritePreview() {
     MaterialTheme {
         CityItemComposable(
             city = City(
@@ -133,6 +142,68 @@ fun CityItemComposableNotFavoritePreview() {
             onClick = {},
             onFavoriteToggle = {},
             onMapClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Light Mode - Selected")
+@Composable
+fun CityItemComposableLightModeSelectedPreview() {
+    MaterialTheme {
+        CityItemComposable(
+            city = City(
+                id = 3,
+                name = "Paris",
+                country = "France",
+                lat = 48.8566,
+                lon = 2.3522,
+                isFavorite = true
+            ),
+            onClick = {},
+            onFavoriteToggle = {},
+            onMapClick = {},
+            isSelected = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun CityItemComposableDarkModePreview() {
+    MaterialTheme {
+        CityItemComposable(
+            city = City(
+                id = 4,
+                name = "Tokyo",
+                country = "Japan",
+                lat = 35.6762,
+                lon = 139.6503,
+                isFavorite = false
+            ),
+            onClick = {},
+            onFavoriteToggle = {},
+            onMapClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Selected Dark Mode", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun CityItemComposableSelectedDarkModePreview() {
+    MaterialTheme {
+        CityItemComposable(
+            city = City(
+                id = 5,
+                name = "Berlin",
+                country = "Germany",
+                lat = 52.5200,
+                lon = 13.4050,
+                isFavorite = true
+            ),
+            onClick = {},
+            onFavoriteToggle = {},
+            onMapClick = {},
+            isSelected = true
         )
     }
 }

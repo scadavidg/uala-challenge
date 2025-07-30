@@ -97,18 +97,38 @@ fun ModeTransitionOverlay(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Online - Light Mode")
 @Composable
-fun ModeTransitionOverlayOnlinePreview() {
+fun ModeTransitionOverlayOnlineLightModePreview() {
     MaterialTheme {
         ModeTransitionOverlay(isOnlineMode = true)
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Offline - Light Mode")
 @Composable
-fun ModeTransitionOverlayOfflinePreview() {
+fun ModeTransitionOverlayOfflineLightModePreview() {
     MaterialTheme {
+        ModeTransitionOverlay(isOnlineMode = false)
+    }
+}
+
+@Preview(showBackground = true, name = "Online - Dark Mode")
+@Composable
+fun ModeTransitionOverlayOnlineDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
+        ModeTransitionOverlay(isOnlineMode = true)
+    }
+}
+
+@Preview(showBackground = true, name = "Offline - Dark Mode")
+@Composable
+fun ModeTransitionOverlayOfflineDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
         ModeTransitionOverlay(isOnlineMode = false)
     }
 }

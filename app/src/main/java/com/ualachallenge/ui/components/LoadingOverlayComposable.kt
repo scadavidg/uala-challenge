@@ -25,10 +25,20 @@ fun LoadingOverlayComposable(modifier: Modifier = Modifier, backgroundColor: Col
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun LoadingOverlayComposablePreview() {
+fun LoadingOverlayComposableLightModePreview() {
     MaterialTheme {
+        LoadingOverlayComposable()
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode")
+@Composable
+fun LoadingOverlayComposableDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
         LoadingOverlayComposable()
     }
 }

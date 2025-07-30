@@ -44,10 +44,23 @@ fun ErrorScreenComposable(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun ErrorScreenComposablePreview() {
+fun ErrorScreenComposableLightModePreview() {
     MaterialTheme {
+        ErrorScreenComposable(
+            error = "Network error occurred. Please check your connection.",
+            onRetry = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode")
+@Composable
+fun ErrorScreenComposableDarkModePreview() {
+    MaterialTheme(
+        colorScheme = androidx.compose.material3.darkColorScheme()
+    ) {
         ErrorScreenComposable(
             error = "Network error occurred. Please check your connection.",
             onRetry = {}
