@@ -32,9 +32,9 @@ This project is a complete implementation of the **Ualá Mobile Challenge** for 
 
 The application adheres strictly to **Clean Architecture** principles, dividing the codebase into three distinct modules:
 
-* [cite_start]**Domain Layer**: This module contains the core business logic, including models (e.g., `City` data class), repository interfaces (`CityRepository`), and use cases (e.g., `LoadAllCitiesUseCase`, `SearchCitiesUseCase`, `ToggleFavoriteUseCase`, `GetFavoriteCitiesUseCase`, `GetCityByIdUseCase`)[cite: 154]. It is independent of Android-specific frameworks.
-* **Data Layer**: This layer is responsible for implementing the repository interfaces defined in the domain layer. [cite_start]It includes remote data sources (Retrofit for API calls), local data sources (Room Database for city data and DataStore for favorites persistence), and mappers for converting DTOs to domain models[cite: 154, 155, 177, 178].
-* [cite_start]**App Layer**: This is the presentation layer, containing UI components (Jetpack Compose Composables), ViewModels for state management, and Hilt DI modules for setting up the application[cite: 154].
+* **Domain Layer**: This module contains the core business logic, including models (e.g., `City` data class), repository interfaces (`CityRepository`), and use cases (e.g., `LoadAllCitiesUseCase`, `SearchCitiesUseCase`, `ToggleFavoriteUseCase`, `GetFavoriteCitiesUseCase`, `GetCityByIdUseCase`). It is independent of Android-specific frameworks.
+* **Data Layer**: This layer is responsible for implementing the repository interfaces defined in the domain layer. [cite_start]It includes remote data sources (Retrofit for API calls), local data sources (Room Database for city data and DataStore for favorites persistence), and mappers for converting DTOs to domain models.
+* **App Layer**: This is the presentation layer, containing UI components (Jetpack Compose Composables), ViewModels for state management, and Hilt DI modules for setting up the application.
 
 ```mermaid
 graph TD
