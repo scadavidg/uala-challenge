@@ -65,7 +65,11 @@ import com.ualachallenge.ui.viewmodel.CitySearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun CityListLandscapeScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Unit = {}, selectedCityId: Int? = null) {
+fun CityListLandscapeScreenComposable(
+    onCityClick: (Int) -> Unit, 
+    onMapClick: (Int) -> Unit = {}, 
+    selectedCityId: Int? = null
+) {
     val dataViewModel: CityListDataViewModel = hiltViewModel()
     val searchViewModel: CitySearchViewModel = hiltViewModel()
     val favoritesViewModel: CityFavoritesViewModel = hiltViewModel()
@@ -177,6 +181,8 @@ fun CityListLandscapeScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (I
         }
     }
 
+
+
     val pullRefreshState =
         rememberPullRefreshState(
             refreshing = uiState.isLoading,
@@ -228,9 +234,10 @@ fun CityListLandscapeScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (I
                                 // Clear the search
                                 searchViewModel.clearSearch()
 
-                                // If the favorites filter is activated, load all cities
+                                // If the favorites filter is activated, load all cities and refresh favorites
                                 if (newShowOnlyFavorites) {
                                     dataViewModel.loadAllCitiesForFavorites()
+                                    favoritesViewModel.loadFavoriteCities()
                                 }
                             },
                             enabled = true
@@ -341,18 +348,12 @@ fun CityListLandscapeScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (I
                                     hasMoreData = uiState.hasMoreData,
                                     onLoadMore = { dataViewModel.loadMoreCities() },
                                     selectedCityId = selectedCityState.value?.id,
-                                    listState = lazyListState
+                                    listState = lazyListState,
+                                    isFavoritesMode = uiState.showOnlyFavorites
                                 )
                             } else {
                                 // Show no search results message
-                                if (uiState.showOnlyFavorites) {
-                                    EmptyStateScreenComposable(isFavorites = true)
-                                } else {
-                                    EmptyStateScreenComposable(
-                                        isOnlineMode = uiState.isOnlineMode,
-                                        isSearchResults = true
-                                    )
-                                }
+                                EmptyStateScreenComposable(isSearchResults = true)
                             }
                         }
 
@@ -380,12 +381,18 @@ fun CityListLandscapeScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (I
                                     hasMoreData = uiState.hasMoreData,
                                     onLoadMore = { dataViewModel.loadMoreCities() },
                                     selectedCityId = selectedCityState.value?.id,
-                                    listState = lazyListState
+                                    listState = lazyListState,
+                                    isFavoritesMode = uiState.showOnlyFavorites
                                 )
                             } else {
                                 // Check if we're in favorites mode and show appropriate message
                                 if (uiState.showOnlyFavorites) {
-                                    EmptyStateScreenComposable(isFavorites = true)
+                                    // Check if there's an active search in favorites mode
+                                    if (uiState.searchQuery.isNotBlank()) {
+                                        EmptyStateScreenComposable(isSearchResults = true)
+                                    } else {
+                                        EmptyStateScreenComposable(isFavorites = true)
+                                    }
                                 } else {
                                     EmptyStateScreenComposable(isOnlineMode = uiState.isOnlineMode)
                                 }

@@ -56,7 +56,11 @@ import com.ualachallenge.ui.viewmodel.CitySearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
-fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Unit = {}, selectedCityId: Int? = null) {
+fun CityListScreenComposable(
+    onCityClick: (Int) -> Unit,
+    onMapClick: (Int) -> Unit = {}, 
+    selectedCityId: Int? = null
+) {
     val dataViewModel: CityListDataViewModel = hiltViewModel()
     val searchViewModel: CitySearchViewModel = hiltViewModel()
     val favoritesViewModel: CityFavoritesViewModel = hiltViewModel()
@@ -159,6 +163,8 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
         }
     }
 
+
+
     val pullRefreshState =
         rememberPullRefreshState(
             refreshing = uiState.isLoading,
@@ -235,9 +241,10 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                                 // Clear the search
                                 searchViewModel.clearSearch()
 
-                                // If the favorites filter is activated, load all cities
+                                // If the favorites filter is activated, load all cities and refresh favorites
                                 if (newShowOnlyFavorites) {
                                     dataViewModel.loadAllCitiesForFavorites()
+                                    favoritesViewModel.loadFavoriteCities()
                                 }
                             },
                             enabled = true // Always enabled, regardless of migration status
@@ -318,29 +325,35 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                         EmptyStateScreenComposable(isOnlineMode = true)
                     }
 
-                    // Show search results or no results message
-                    uiState.searchQuery.isNotBlank() -> {
-                        if (uiState.filteredCities.isNotEmpty()) {
-                            CityListComposable(
-                                cities = uiState.filteredCities,
-                                onCityClick = { cityId ->
-                                    // Update selected city for visual feedback
-                                    val city = uiState.filteredCities.find { it.id == cityId }
-                                    selectedCityState.value = city
-                                    onCityClick(cityId)
-                                },
-                                onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
-                                onMapClick = onMapClick,
-                                isLoadingMore = uiState.isLoadingMore,
-                                hasMoreData = uiState.hasMoreData,
-                                onLoadMore = { dataViewModel.loadMoreCities() },
-                                selectedCityId = selectedCityState.value?.id,
-                                listState = lazyListState
-                            )
+                                            // Show search results or no results message
+                        uiState.searchQuery.isNotBlank() -> {
+                            if (uiState.filteredCities.isNotEmpty()) {
+                                CityListComposable(
+                                    cities = uiState.filteredCities,
+                                    onCityClick = { cityId ->
+                                        // Update selected city for visual feedback
+                                        val city = uiState.filteredCities.find { it.id == cityId }
+                                        selectedCityState.value = city
+                                        onCityClick(cityId)
+                                    },
+                                    onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
+                                    onMapClick = onMapClick,
+                                    isLoadingMore = uiState.isLoadingMore,
+                                    hasMoreData = uiState.hasMoreData,
+                                    onLoadMore = { dataViewModel.loadMoreCities() },
+                                    selectedCityId = selectedCityState.value?.id,
+                                    listState = lazyListState,
+                                    isFavoritesMode = uiState.showOnlyFavorites
+                                )
                         } else {
                             // Show no search results message
                             if (uiState.showOnlyFavorites) {
-                                EmptyStateScreenComposable(isFavorites = true)
+                                // Check if there's an active search in favorites mode
+                                if (uiState.searchQuery.isNotBlank()) {
+                                    EmptyStateScreenComposable(isSearchResults = true)
+                                } else {
+                                    EmptyStateScreenComposable(isFavorites = true)
+                                }
                             } else {
                                 EmptyStateScreenComposable(
                                     isOnlineMode = uiState.isOnlineMode,
@@ -350,29 +363,35 @@ fun CityListScreenComposable(onCityClick: (Int) -> Unit, onMapClick: (Int) -> Un
                         }
                     }
 
-                    // Show main list or empty state
-                    else -> {
-                        if (uiState.filteredCities.isNotEmpty()) {
-                            CityListComposable(
-                                cities = uiState.filteredCities,
-                                onCityClick = { cityId ->
-                                    // Update selected city for visual feedback
-                                    val city = uiState.filteredCities.find { it.id == cityId }
-                                    selectedCityState.value = city
-                                    onCityClick(cityId)
-                                },
-                                onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
-                                onMapClick = onMapClick,
-                                isLoadingMore = uiState.isLoadingMore,
-                                hasMoreData = uiState.hasMoreData,
-                                onLoadMore = { dataViewModel.loadMoreCities() },
-                                selectedCityId = selectedCityState.value?.id,
-                                listState = lazyListState
-                            )
+                                            // Show main list or empty state
+                        else -> {
+                            if (uiState.filteredCities.isNotEmpty()) {
+                                CityListComposable(
+                                    cities = uiState.filteredCities,
+                                    onCityClick = { cityId ->
+                                        // Update selected city for visual feedback
+                                        val city = uiState.filteredCities.find { it.id == cityId }
+                                        selectedCityState.value = city
+                                        onCityClick(cityId)
+                                    },
+                                    onFavoriteToggle = { cityId -> favoritesViewModel.toggleFavorite(cityId) },
+                                    onMapClick = onMapClick,
+                                    isLoadingMore = uiState.isLoadingMore,
+                                    hasMoreData = uiState.hasMoreData,
+                                    onLoadMore = { dataViewModel.loadMoreCities() },
+                                    selectedCityId = selectedCityState.value?.id,
+                                    listState = lazyListState,
+                                    isFavoritesMode = uiState.showOnlyFavorites
+                                )
                         } else {
                             // Check if we're in favorites mode and show appropriate message
                             if (uiState.showOnlyFavorites) {
-                                EmptyStateScreenComposable(isFavorites = true)
+                                // Check if there's an active search in favorites mode
+                                if (uiState.searchQuery.isNotBlank()) {
+                                    EmptyStateScreenComposable(isSearchResults = true)
+                                } else {
+                                    EmptyStateScreenComposable(isFavorites = true)
+                                }
                             } else {
                                 EmptyStateScreenComposable(isOnlineMode = uiState.isOnlineMode)
                             }

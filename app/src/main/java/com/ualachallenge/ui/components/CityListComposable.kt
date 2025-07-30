@@ -34,7 +34,8 @@ fun CityListComposable(
     hasMoreData: Boolean = false,
     onLoadMore: (() -> Unit)? = null,
     selectedCityId: Int? = null,
-    listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState()
+    listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
+    isFavoritesMode: Boolean = false
 ) {
     val groupedCities = cities.groupBy { it.name.first().uppercase() }
         .toSortedMap()
@@ -143,7 +144,8 @@ fun CityListComposable(
             listState = listState,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .fillMaxHeight()
+                .fillMaxHeight(),
+            isFavoritesMode = isFavoritesMode
         )
     }
 }

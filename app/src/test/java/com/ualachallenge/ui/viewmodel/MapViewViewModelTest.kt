@@ -28,6 +28,7 @@ class MapViewViewModelTest {
 
     private lateinit var getCityByIdUseCase: GetCityByIdUseCase
     private lateinit var toggleFavoriteUseCase: ToggleFavoriteUseCase
+    private lateinit var favoriteNotificationViewModel: FavoriteNotificationViewModel
     private lateinit var savedStateHandle: SavedStateHandle
     private lateinit var viewModel: MapViewViewModel
 
@@ -38,8 +39,9 @@ class MapViewViewModelTest {
         Dispatchers.setMain(testDispatcher)
         getCityByIdUseCase = mockk()
         toggleFavoriteUseCase = mockk()
+        favoriteNotificationViewModel = mockk(relaxed = true)
         savedStateHandle = SavedStateHandle(mapOf("cityId" to 1))
-        viewModel = MapViewViewModel(getCityByIdUseCase, toggleFavoriteUseCase, savedStateHandle)
+        viewModel = MapViewViewModel(getCityByIdUseCase, toggleFavoriteUseCase, favoriteNotificationViewModel, savedStateHandle)
     }
 
     @AfterEach
