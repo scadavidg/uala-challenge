@@ -5,9 +5,13 @@ import com.domain.models.Result
 import com.domain.usecases.GetFavoriteCitiesUseCase
 import com.domain.usecases.ToggleFavoriteUseCase
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.Dispatchers
+import com.ualachallenge.ui.viewmodel.FavoriteChangeEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -25,11 +29,14 @@ import org.junit.jupiter.api.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class CityFavoritesViewModelTest {
 
+
+
     private lateinit var viewModel: CityFavoritesViewModel
     private lateinit var mockToggleFavoriteUseCase: ToggleFavoriteUseCase
     private lateinit var mockGetFavoriteCitiesUseCase: GetFavoriteCitiesUseCase
     private lateinit var mockDataViewModel: CityListDataViewModel
     private lateinit var mockSearchViewModel: CitySearchViewModel
+    private lateinit var mockFavoriteNotificationViewModel: FavoriteNotificationViewModel
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -45,8 +52,14 @@ class CityFavoritesViewModelTest {
         mockGetFavoriteCitiesUseCase = mockk()
         mockDataViewModel = mockk(relaxed = true)
         mockSearchViewModel = mockk(relaxed = true)
+        
+        // Create a proper mock for FavoriteNotificationViewModel with a real SharedFlow
+        val favoriteChangeEventsFlow = MutableSharedFlow<FavoriteChangeEvent>()
+        mockFavoriteNotificationViewModel = mockk<FavoriteNotificationViewModel> {
+            every { favoriteChangeEvents } returns favoriteChangeEventsFlow
+        }
 
-        viewModel = CityFavoritesViewModel(mockToggleFavoriteUseCase, mockGetFavoriteCitiesUseCase)
+        viewModel = CityFavoritesViewModel(mockToggleFavoriteUseCase, mockGetFavoriteCitiesUseCase, mockFavoriteNotificationViewModel)
         viewModel.setDataViewModel(mockDataViewModel)
         viewModel.setSearchViewModel(mockSearchViewModel)
 
@@ -56,6 +69,16 @@ class CityFavoritesViewModelTest {
     @AfterEach
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `test initial state`() {
+        // Given - Initial state
+        
+        // When & Then
+        assertFalse(viewModel.isToggling())
+        assertNull(viewModel.getError())
+        assertTrue(viewModel.getFavoriteCities().isEmpty())
     }
 
     @Test
@@ -352,7 +375,7 @@ class CityFavoritesViewModelTest {
     fun `toggleFavorite without dataViewModel set`() = runTest {
         // Given
         val cityId = 1
-        val viewModelWithoutData = CityFavoritesViewModel(mockToggleFavoriteUseCase, mockGetFavoriteCitiesUseCase)
+        val viewModelWithoutData = CityFavoritesViewModel(mockToggleFavoriteUseCase, mockGetFavoriteCitiesUseCase, mockFavoriteNotificationViewModel)
         coEvery { mockToggleFavoriteUseCase(cityId) } returns Result.Success(Unit)
         coEvery { mockGetFavoriteCitiesUseCase() } returns Result.Success(testCities)
 
@@ -369,7 +392,7 @@ class CityFavoritesViewModelTest {
     fun `toggleFavorite without searchViewModel set`() = runTest {
         // Given
         val cityId = 1
-        val viewModelWithoutSearch = CityFavoritesViewModel(mockToggleFavoriteUseCase, mockGetFavoriteCitiesUseCase)
+        val viewModelWithoutSearch = CityFavoritesViewModel(mockToggleFavoriteUseCase, mockGetFavoriteCitiesUseCase, mockFavoriteNotificationViewModel)
         viewModelWithoutSearch.setDataViewModel(mockDataViewModel)
         coEvery { mockToggleFavoriteUseCase(cityId) } returns Result.Success(Unit)
         coEvery { mockGetFavoriteCitiesUseCase() } returns Result.Success(testCities)

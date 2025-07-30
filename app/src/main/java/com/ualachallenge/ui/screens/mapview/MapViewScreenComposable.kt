@@ -50,7 +50,11 @@ import com.ualachallenge.ui.viewmodel.MapViewViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapViewScreenComposable(onNavigateBack: (Int) -> Unit, cityId: Int, viewModel: MapViewViewModel = hiltViewModel()) {
+fun MapViewScreenComposable(
+    onNavigateBack: (Int) -> Unit, 
+    cityId: Int, 
+    viewModel: MapViewViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
     val configuration = LocalConfiguration.current
 

@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 class MapViewViewModel @Inject constructor(
     private val getCityByIdUseCase: GetCityByIdUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val favoriteNotificationViewModel: FavoriteNotificationViewModel,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -94,18 +95,26 @@ class MapViewViewModel @Inject constructor(
     fun toggleFavorite() {
         _uiState.update { it.copy(isTogglingFavorite = true, error = null) }
 
+        // Notify that favorite toggle is starting
+        favoriteNotificationViewModel.notifyFavoriteToggle(cityId)
+
         viewModelScope.launch {
             try {
                 when (val result = toggleFavoriteUseCase(cityId)) {
                     is Result.Success -> {
+                        val newFavoriteStatus = !(_uiState.value.city?.isFavorite ?: false)
+                        
                         _uiState.update { currentState ->
                             currentState.copy(
                                 city = currentState.city?.copy(
-                                    isFavorite = !currentState.city.isFavorite
+                                    isFavorite = newFavoriteStatus
                                 ),
                                 isTogglingFavorite = false
                             )
                         }
+
+                        // Notify other ViewModels about the favorite change
+                        favoriteNotificationViewModel.notifyFavoriteChange(cityId, newFavoriteStatus)
                     }
 
                     is Result.Error -> {

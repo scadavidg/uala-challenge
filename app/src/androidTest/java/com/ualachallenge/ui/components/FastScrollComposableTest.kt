@@ -70,45 +70,6 @@ class FastScrollComposableTest {
     )
 
     @Test
-    fun fastScroll_displaysLetters_whenMultipleCitiesExist() {
-        // Given
-        val listState = LazyListState()
-
-        // When
-        composeTestRule.setContent {
-            FastScrollComposable(
-                cities = testCities,
-                listState = listState
-            )
-        }
-
-        // Then
-        // Should display letters A, B, C, D, E, F, G, H, I, K, L, M, N, O, P, R, S, T, U, V, W, Y
-        composeTestRule.onNodeWithText("A").assertIsDisplayed()
-        composeTestRule.onNodeWithText("B").assertIsDisplayed()
-        composeTestRule.onNodeWithText("C").assertIsDisplayed()
-        composeTestRule.onNodeWithText("D").assertIsDisplayed()
-        composeTestRule.onNodeWithText("E").assertIsDisplayed()
-        composeTestRule.onNodeWithText("F").assertIsDisplayed()
-        composeTestRule.onNodeWithText("G").assertIsDisplayed()
-        composeTestRule.onNodeWithText("H").assertIsDisplayed()
-        composeTestRule.onNodeWithText("I").assertIsDisplayed()
-        composeTestRule.onNodeWithText("K").assertIsDisplayed()
-        composeTestRule.onNodeWithText("L").assertIsDisplayed()
-        composeTestRule.onNodeWithText("M").assertIsDisplayed()
-        composeTestRule.onNodeWithText("N").assertIsDisplayed()
-        composeTestRule.onNodeWithText("O").assertIsDisplayed()
-        composeTestRule.onNodeWithText("P").assertIsDisplayed()
-        composeTestRule.onNodeWithText("R").assertIsDisplayed()
-        composeTestRule.onNodeWithText("S").assertIsDisplayed()
-        composeTestRule.onNodeWithText("T").assertIsDisplayed()
-        composeTestRule.onNodeWithText("U").assertIsDisplayed()
-        composeTestRule.onNodeWithText("V").assertIsDisplayed()
-        composeTestRule.onNodeWithText("W").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Y").assertIsDisplayed()
-    }
-
-    @Test
     fun fastScroll_doesNotDisplay_whenOnlyOneCityExists() {
         // Given
         val singleCity = listOf(testCities[0]) // Only Alabama

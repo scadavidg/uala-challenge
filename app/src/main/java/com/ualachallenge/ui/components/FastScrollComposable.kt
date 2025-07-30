@@ -39,8 +39,20 @@ import kotlinx.coroutines.launch
 fun FastScrollComposable(
     cities: List<City>,
     listState: LazyListState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isFavoritesMode: Boolean = false
 ) {
+    // Force recomposition when cities change by using a key
+    val citiesKey = remember(cities.size, isFavoritesMode) { 
+        "${cities.size}_${isFavoritesMode}_${cities.firstOrNull()?.name?.first() ?: 'A'}"
+    }
+    
+    // Force recomposition when cities change
+    LaunchedEffect(citiesKey) {
+        // This will trigger when the cities list changes
+        // This ensures the fast scroll indicator updates when switching between favorites and all cities
+    }
+
     val groupedCities = cities.groupBy { it.name.first().uppercase() }
         .toSortedMap()
 
@@ -52,6 +64,7 @@ fun FastScrollComposable(
             contentAlignment = Alignment.CenterEnd
         ) {
             // Fast scroll indicator centered on the right side
+            // Use key to force recomposition when cities change
             FastScrollIndicator(
                 availableLetters = availableLetters,
                 groupedCities = groupedCities,
@@ -60,7 +73,8 @@ fun FastScrollComposable(
                     .width(24.dp)
                     .fillMaxHeight()
                     .padding(vertical = 8.dp)
-                    .padding(end = 4.dp)
+                    .padding(end = 4.dp),
+                key = citiesKey
             )
         }
     }
@@ -71,10 +85,17 @@ private fun FastScrollIndicator(
     availableLetters: List<String>,
     groupedCities: Map<String, List<City>>,
     listState: LazyListState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    key: String
 ) {
     var isScrolling by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Force recomposition when key changes
+    LaunchedEffect(key) {
+        // This will trigger when the key changes, forcing the component to recompose
+        // and recalculate all derived states
+    }
 
     // Get orientation outside of derivedStateOf
     val configuration = LocalConfiguration.current
@@ -82,7 +103,7 @@ private fun FastScrollIndicator(
     val maxItems = if (isLandscape) 5 else 12 // 5 for landscape, 12 for portrait
 
     // Track current visible letter based on scroll position
-    val currentVisibleLetter by remember {
+    val currentVisibleLetter by remember(availableLetters) {
         derivedStateOf {
             val visibleItems = listState.layoutInfo.visibleItemsInfo
 
@@ -107,7 +128,7 @@ private fun FastScrollIndicator(
     }
 
     // Calculate which letters to show based on current position and orientation
-    val visibleLetters by remember {
+    val visibleLetters by remember(key) {
         derivedStateOf {
             val currentLetterIndex = availableLetters.indexOf(currentVisibleLetter)
 
@@ -145,6 +166,8 @@ private fun FastScrollIndicator(
             )
         }
     }
+
+
 
     // Auto-hide indicator after scrolling
     LaunchedEffect(isScrolling) {

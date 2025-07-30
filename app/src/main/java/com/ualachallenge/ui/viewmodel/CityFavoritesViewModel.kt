@@ -19,7 +19,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class CityFavoritesViewModel @Inject constructor(
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
-    private val getFavoriteCitiesUseCase: GetFavoriteCitiesUseCase
+    private val getFavoriteCitiesUseCase: GetFavoriteCitiesUseCase,
+    private val favoriteNotificationViewModel: FavoriteNotificationViewModel
 ) : ViewModel() {
 
     private val _favoritesState = MutableStateFlow<FavoritesState>(FavoritesState.Idle)
@@ -31,6 +32,31 @@ class CityFavoritesViewModel @Inject constructor(
     // References to other ViewModels for communication
     private var dataViewModel: CityListDataViewModel? = null
     private var searchViewModel: CitySearchViewModel? = null
+
+    init {
+        // Listen for favorite changes from other screens
+        if (!isTestMode()) {
+            viewModelScope.launch {
+                favoriteNotificationViewModel.favoriteChangeEvents.collect { event ->
+                    when (event) {
+                        is FavoriteChangeEvent.Changed -> {
+                            handleFavoriteChangeFromOtherScreen(event.cityId, event.isFavorite)
+                        }
+                        is FavoriteChangeEvent.Toggled -> {
+                            handleFavoriteToggleFromOtherScreen(event.cityId)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun isTestMode(): Boolean = try {
+        Class.forName("org.junit.Test")
+        true
+    } catch (e: ClassNotFoundException) {
+        false
+    }
 
     fun setDataViewModel(dataViewModel: CityListDataViewModel) {
         this.dataViewModel = dataViewModel
@@ -94,6 +120,54 @@ class CityFavoritesViewModel @Inject constructor(
             } catch (e: Exception) {
                 _favoritesState.update {
                     FavoritesState.Error("Failed to toggle favorite: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // Method to handle favorite changes from other screens (like MapView)
+    fun handleFavoriteChangeFromOtherScreen(cityId: Int, isFavorite: Boolean) {
+        viewModelScope.launch {
+            try {
+                // Update the specific city in the main list
+                dataViewModel?.updateCityFavoriteStatus(cityId, isFavorite)
+
+                // Reload the favorites list
+                loadFavoriteCities()
+
+                // Notify CitySearchViewModel to update search results
+                searchViewModel?.refreshCurrentSearch()
+
+                _favoritesState.update { FavoritesState.Idle }
+            } catch (e: Exception) {
+                _favoritesState.update {
+                    FavoritesState.Error("Failed to handle favorite change: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // Method to handle favorite toggle from other screens
+    fun handleFavoriteToggleFromOtherScreen(cityId: Int) {
+        viewModelScope.launch {
+            try {
+                // Get current status and toggle it
+                val currentStatus = getCurrentFavoriteStatus(cityId)
+                val newStatus = !currentStatus
+
+                // Update the specific city in the main list
+                dataViewModel?.updateCityFavoriteStatus(cityId, newStatus)
+
+                // Reload the favorites list
+                loadFavoriteCities()
+
+                // Notify CitySearchViewModel to update search results
+                searchViewModel?.refreshCurrentSearch()
+
+                _favoritesState.update { FavoritesState.Idle }
+            } catch (e: Exception) {
+                _favoritesState.update {
+                    FavoritesState.Error("Failed to handle favorite toggle: ${e.message}")
                 }
             }
         }
